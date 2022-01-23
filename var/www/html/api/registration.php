@@ -95,8 +95,6 @@
 
         }
 
-        
-
     }
     
     catch (Exception $e){
@@ -111,7 +109,4 @@
             $simpleRest->setHttpHeaders(500);
         }
     }
-
-    
-
 ?>
