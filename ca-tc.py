@@ -161,7 +161,7 @@ def exitApp(exitCode=None):
         logger.info("Deleting temporary folder.")
 
         #Delete the old temp directory
-        #shutil.rmtree(settings['tempPath'])
+        shutil.rmtree(settings['tempPath'])
 
     if exitCode == 0:
         print(applicationName + " application finished successfully.")
