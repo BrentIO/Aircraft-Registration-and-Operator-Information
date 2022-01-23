@@ -29,10 +29,26 @@
 
         }
 
+        //Determine if detailed data is being requested or simple.  Default is simple.
+        if(isset($_GET_lower['detailed']) == True){
+
+            if($_GET_lower['detailed'] == "true"){
+
+                $tableName = "registrations";
+
+            }else{
+
+                $tableName = "simple";
+            }
+        }else{
+
+            $tableName = "simple";
+        }
+
         if(isset($_GET_lower['icao_hex']) == True){
 
             //Query the database for the data
-            $response = $database->query("SELECT data FROM registrations WHERE icao_hex = '" . strtolower($_GET_lower['icao_hex']) . "' AND deleted is null;");
+            $response = $database->query("SELECT data FROM " . $tableName . " WHERE icao_hex = '" . strtolower($_GET_lower['icao_hex']) . "' AND deleted is null;");
 
             switch($database->rowsAffected){
 
@@ -57,7 +73,7 @@
         if(isset($_GET_lower['registration']) == True){
 
             //Query the database for the data
-            $response = $database->query("SELECT data FROM registrations WHERE registration = '" . strtolower($_GET_lower['registration']) . "' AND deleted is null;");
+            $response = $database->query("SELECT data FROM " . $tableName . " WHERE registration = '" . strtolower($_GET_lower['registration']) . "' AND deleted is null;");
 
             switch($database->rowsAffected){
 
