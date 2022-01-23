@@ -15,7 +15,7 @@ USE `registrations` ;
 CREATE TABLE IF NOT EXISTS `registrations`.`registrations` (
   `unique_id` INT NOT NULL AUTO_INCREMENT,
   `icao_hex` CHAR(6) NOT NULL,
-  `registration` VARCHAR(8) NOT NULL,
+  `registration` VARCHAR(20) NOT NULL,
   `data` JSON NOT NULL,
   `hash` CHAR(32) NOT NULL,
   `source` INT NOT NULL,
