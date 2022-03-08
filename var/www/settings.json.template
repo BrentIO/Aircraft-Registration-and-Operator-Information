@@ -1,8 +1,0 @@
-{
-    "debugMode" : false,
-    "sqlServer": "my.mysql.server.lan",
-    "database": "registrations",
-    "sqlUsername": "my_username",
-    "sqlPassword": "my_clear_text_password",
-    "x-api-key" : "some_secret_key"
-}
