@@ -452,7 +452,7 @@ def decode_description(description):
             returnValue['category'] = "Tiltrotor"
 
         if str(description[1]).isnumeric() == True:
-            returnValue['powerplant']['count'] = description[1]
+            returnValue['powerplant']['count'] = int(description[1])
 
         else:
             if description[1].upper() == "C":
@@ -497,7 +497,8 @@ def decode_description(description):
         if description[0].upper() == "T":
             returnValue['category'] = "Tiltrotor"
 
-        returnValue['powerplant']['count'] = description[1:1]
+        if str(description[1:1]).isnumeric():
+            returnValue['powerplant']['count'] = int(description[1:1])
 
         if description[3].upper() == "E":
             returnValue['powerplant']['type'] = "Electric"
