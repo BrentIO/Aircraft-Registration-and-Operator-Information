@@ -4,15 +4,9 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 
 
 -- -----------------------------------------------------
--- Schema registrations
+-- Table `registrations`
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `registrations` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci ;
-USE `registrations` ;
-
--- -----------------------------------------------------
--- Table `registrations`.`registrations`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `registrations`.`registrations` (
+CREATE TABLE IF NOT EXISTS `registrations` (
   `unique_id` INT NOT NULL AUTO_INCREMENT,
   `icao_hex` CHAR(6) NOT NULL,
   `registration` VARCHAR(20) NOT NULL,
@@ -26,21 +20,21 @@ ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
 
-CREATE UNIQUE INDEX `unique_id_UNIQUE` ON `registrations`.`registrations` (`unique_id` ASC) VISIBLE;
+CREATE UNIQUE INDEX `unique_id_UNIQUE` ON `registrations` (`unique_id` ASC) VISIBLE;
 
-CREATE UNIQUE INDEX `icao_hex_hash` ON `registrations`.`registrations` (`icao_hex` ASC, `hash` ASC) VISIBLE;
+CREATE UNIQUE INDEX `icao_hex_hash` ON `registrations` (`icao_hex` ASC, `hash` ASC) VISIBLE;
 
-CREATE INDEX `icao_hex` ON `registrations`.`registrations` (`icao_hex` ASC) VISIBLE;
+CREATE INDEX `icao_hex` ON `registrations` (`icao_hex` ASC) VISIBLE;
 
-CREATE INDEX `hash` ON `registrations`.`registrations` (`hash` ASC) VISIBLE;
+CREATE INDEX `hash` ON `registrations` (`hash` ASC) VISIBLE;
 
-CREATE INDEX `registration` ON `registrations`.`registrations` (`registration` ASC) VISIBLE;
+CREATE INDEX `registration` ON `registrations` (`registration` ASC) VISIBLE;
 
 
 -- -----------------------------------------------------
--- Table `registrations`.`simple`
+-- Table `simple`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `registrations`.`simple` (
+CREATE TABLE IF NOT EXISTS `simple` (
   `unique_id` INT NOT NULL AUTO_INCREMENT,
   `icao_hex` CHAR(6) NOT NULL,
   `registration` VARCHAR(20) NOT NULL,
@@ -54,21 +48,21 @@ ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
 
-CREATE UNIQUE INDEX `unique_id_UNIQUE` ON `registrations`.`simple` (`unique_id` ASC) VISIBLE;
+CREATE UNIQUE INDEX `unique_id_UNIQUE` ON `simple` (`unique_id` ASC) VISIBLE;
 
-CREATE UNIQUE INDEX `icao_hex_hash` ON `registrations`.`simple` (`icao_hex` ASC, `hash` ASC) VISIBLE;
+CREATE UNIQUE INDEX `icao_hex_hash` ON `simple` (`icao_hex` ASC, `hash` ASC) VISIBLE;
 
-CREATE INDEX `icao_hex` ON `registrations`.`simple` (`icao_hex` ASC) VISIBLE;
+CREATE INDEX `icao_hex` ON `simple` (`icao_hex` ASC) VISIBLE;
 
-CREATE INDEX `hash` ON `registrations`.`simple` (`hash` ASC) VISIBLE;
+CREATE INDEX `hash` ON `simple` (`hash` ASC) VISIBLE;
 
-CREATE INDEX `registration` ON `registrations`.`simple` (`registration` ASC) VISIBLE;
+CREATE INDEX `registration` ON `simple` (`registration` ASC) VISIBLE;
 
 
 -- -----------------------------------------------------
--- Table `registrations`.`sources`
+-- Table `sources`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `registrations`.`sources` (
+CREATE TABLE IF NOT EXISTS `sources` (
   `unique_id` INT NOT NULL AUTO_INCREMENT,
   `agency` VARCHAR(50) NOT NULL,
   PRIMARY KEY (`unique_id`))
@@ -78,7 +72,7 @@ COLLATE = utf8mb4_0900_ai_ci;
 
 
 -- -----------------------------------------------------
--- Table `registrations`.`operators`
+-- Table `operators`
 -- -----------------------------------------------------
 CREATE TABLE `operators` (
   `unique_id` int NOT NULL AUTO_INCREMENT,
