@@ -2,7 +2,7 @@
 Enrich ADS-B information with aircraft registration and operator data
 
 ## What Does it Do?
-Aircraft Registration and Operator Information (AROI) imports aircraft registrations and operator information from various sources, stores them in MySQL, and makes that data available to retrieve via API microservice.  It is designed to work as microservice for [SkyFollower](https://github.com/BrentIO/SkyFollower).
+Aircraft Registration and Operator Information (AROI) imports aircraft registrations and operator information from various sources, stores them in MySQL, and makes that data available to retrieve via API microservice.  It is designed to work as a microservice for [SkyFollower](https://github.com/BrentIO/SkyFollower).
 
 ## How does it Work?
 
@@ -17,7 +17,6 @@ Using apt, install the prerequisite packages, if you don't already have them ins
 ```
 sudo apt-get install -y python3 python3-pip mysql-server
 ```
-`TO DO: Make sure this list is correct`
 
 Python also requires a number of packages that must be installed:
 ```
@@ -61,11 +60,11 @@ mysql> CREATE DATABASE AROI;
 ```
 > If you use a different database name, adjust the steps below in this guide as well as the settings.json file.
 
-Create the new account, in this case the user will be named `aroi` and the password will be `my_clear_text_password`:
+Create the new account, in this case the user will be named `aroi` and the password will be `my_clear_text_password`, but you should choose something more secure:
 ```
 CREATE USER 'aroi'@'%' IDENTIFIED BY 'my_clear_text_password';
 ```
-
+> Be sure to update the password in the settings.json file.
 
 Grant the user above to have super admin privileges on the database we created, `AROI`:
 ```
@@ -140,13 +139,10 @@ Start the service
 sudo systemctl start AROI.service
 ```
 
-## SQL Table Creation
-`TO DO: PUT STUFF HERE`
-
 ## Import Agency Data
-To load the data into MySQL, you need to download data from at least one agency.  Detailed data comes from the FAA and Transport Canada.  Summary data and operator data comes from Mictronics, and is not an official source.
+To load the data into MySQL, you need to download data from at least one agency.  Detailed data comes from government authorities, such as the FAA and Transport Canada.  Summary data and operator data comes from Mictronics, and is not an official source.
 
-Data is retained forever and it is assumed the latest file imported contains the newest data.
+Data is retained forever in the database and it is assumed the latest file imported contains the newest data.
 
 | Agency | Data Type | Import Script | Release Frequency | URL |
 |--------|-----------|---------------|-------------------|-----|
@@ -154,6 +150,8 @@ Data is retained forever and it is assumed the latest file imported contains the
 | Transport Canada | Detailed | ca-tc.py | Unknown | https://wwwapps.tc.gc.ca/Saf-Sec-Sur/2/CCARCS-RIACC/download/ccarcsdb.zip |
 Mictronics IndexedDB | Summary | mictronics-indexeddb.py | Weekly on Sundays | https://www.mictronics.de/aircraft-database/indexedDB.php |
 
+
+> Each agency's data is different and may take a number of minutes to import depending on the speed of your computer.
 
 ### Mictronics IndexedDB
 
@@ -172,7 +170,9 @@ Download the dataset and update the data weekly on Tuesdays at 05:10:
 
 Force the script to run now:
 
-`sudo python3 /etc/P5Software/AROI/mictronics-indexeddb.py https://www.mictronics.de/aircraft-database/indexedDB.php`
+```
+sudo python3 /etc/P5Software/AROI/mictronics-indexeddb.py https://www.mictronics.de/aircraft-database/indexedDB.php
+```
 
 
 ### United States FAA
@@ -192,7 +192,9 @@ Download the dataset and update the data weekly on Saturdays at 05:10:
 
 Force the script to run now:
 
-`sudo python3 /etc/P5Software/AROI/us-faa.py https://registry.faa.gov/database/ReleasableAircraft.zip`
+```
+sudo python3 /etc/P5Software/AROI/us-faa.py https://registry.faa.gov/database/ReleasableAircraft.zip
+```
 
 ### Transport Canada
 
@@ -207,15 +209,16 @@ Download the dataset and update the data weekly on Sundays at 05:10:
 
 Force the script to run now:
 
-`sudo python3 /etc/P5Software/AROI/ca-tc.py https://wwwapps.tc.gc.ca/Saf-Sec-Sur/2/CCARCS-RIACC/download/ccarcsdb.zip`
-
-
-
+```
+sudo python3 /etc/P5Software/AROI/ca-tc.py https://wwwapps.tc.gc.ca/Saf-Sec-Sur/2/CCARCS-RIACC/download/ccarcsdb.zip
+```
 
 ## FAQ
 - Can I host this on a public website?
   - You can, but it's not a good idea -- the HTTP server is not designed to handle significant volume and implements only minimal security.
   - Some agencies license the use of their data, and doing so could be a violation of that license.
+- The service won't start and there's nothing in any of the logs.  What do I do?
+  - Try starting the service manually by using `sudo python3 api.py`.  If there is an error, it will usually be printed on the screen for you to see.
 
 ## Credits and Thanks
 - [Mictronics](https://github.com/mictronics) for the awesome work with the IndexedDB database.  They also make a really great ADS-B decoder.
