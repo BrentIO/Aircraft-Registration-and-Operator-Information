@@ -71,30 +71,30 @@ def setup(args):
             print("Skipping file download; Will use the cached copy.")
             logger.warning("Skipping file download; Will use the cached copy.")
 
-        if "database" not in settings:
-            raise Exception("The MySQL database information (database) is not populated in the settings.json file.")
+        if "mySQL" not in settings:
+            raise Exception("The database information (mySQL) is not populated in the settings.json file.")
 
-        if "uri" not in settings['database']:
-            raise Exception("The MySQL database uri (database -> uri) is not populated in the settings.json file.")
+        if "uri" not in settings['mySQL']:
+            raise Exception("The database uri (mySQL -> uri) is not populated in the settings.json file.")
 
-        if "username" not in settings['database']:
-            raise Exception("The MySQL database username (database -> username) is not populated in the settings.json file.")
+        if "username" not in settings['mySQL']:
+            raise Exception("The database username (mySQL -> username) is not populated in the settings.json file.")
 
-        if "password" not in settings['database']:
-            raise Exception("The MySQL database password (database -> password) is not populated in the settings.json file.")
+        if "password" not in settings['mySQL']:
+            raise Exception("The database password (mySQL -> password) is not populated in the settings.json file.")
 
-        if "name" not in settings['database']:
-            raise Exception("The MySQL database name (database -> name) is not populated in the settings.json file.")
+        if "database" not in settings['mySQL']:
+            raise Exception("The database name (mySQL -> database) is not populated in the settings.json file.")
 
         #Get the SQL mode, defaulting to "memory"
-        if 'localdb_mode' not in settings:
-            settings['localdb_mode'] = "memory"
+        if 'local_database_mode' not in settings:
+            settings['local_database_mode'] = "memory"
 
-        if str(settings['localdb_mode']).lower() == "memory":
+        if str(settings['local_database_mode']).lower() == "memory":
 
             import_sql = sqlite3.connect(":memory:")
         else:
-            settings['localdb_mode'] = "disk"
+            settings['local_database_mode'] = "disk"
             databaseFile = os.path.join(filePath, "ca-tc-registration.db")
 
             if os.path.exists(databaseFile):
@@ -151,7 +151,7 @@ def exitApp(exitCode=None):
         exitCode = 0
 
     #Commit the database if it is not memory
-    if settings['localdb_mode'] == "disk":
+    if settings['local_database_mode'] == "disk":
         logger.info("Committing database to disk.")
         import_sql.commit()
 
@@ -392,10 +392,10 @@ def export_data():
     logger.info("SQLite returned " + str(len(arrayAircraft)) + " rows of aircraft data.")
 
     registrationsDb = mysql.connector.connect(
-        host=settings['database']['uri'],
-        user=settings['database']['username'],
-        password=settings['database']['password'],
-        database=settings['database']['name'])
+        host=settings['mySQL']['uri'],
+        user=settings['mySQL']['username'],
+        password=settings['mySQL']['password'],
+        database=settings['mySQL']['database'])
 
     logger.info("Creating temp table in MySQL.")
 
