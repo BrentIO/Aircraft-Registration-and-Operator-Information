@@ -1,0 +1,12 @@
+{
+    "mySQL": {
+        "uri": "localhost",
+        "database": "AROI",
+        "username": "aroi",
+        "password": "my_clear_text_password"
+    },
+    "api": {
+        "x-api-key": "5d95bb51-64b1-4269-b812-2e20e59cb3c5",
+        "port": 8480
+    }
+}

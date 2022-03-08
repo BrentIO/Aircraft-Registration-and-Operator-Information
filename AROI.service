@@ -1,0 +1,12 @@
+[Unit]
+Description=Aircraft Registration and Operator Information
+After=multi-user.target
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /etc/P5Software/AROI/api.py
+StandardInput=tty-force
+
+[Install]
+WantedBy=multi-user.target
