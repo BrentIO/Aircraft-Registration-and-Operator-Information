@@ -137,13 +137,25 @@ def getRegistration(requestHandler):
         column_name = "icao_hex"
         query_value = queryString['icao_hex'][0]
 
+    #Prevent cyclical requests
+    if "prohibit_redirect" in queryString:
+        prohibit_redirect = True
+    else:
+        prohibit_redirect = False
+
     #Default to simple data
-    table_name = "simple"
+    data_type = "simple"
 
     if "detailed" in queryString:
         if str(queryString['detailed'][0]).lower() == "true":
             #Change to detailed data
-            table_name = "registrations"
+            data_type = "detailed"
+            
+    #Set the table name based on the data type
+    if data_type == "simple":
+        table_name = "simple"
+    else:
+        table_name = "registrations"
 
     registrationDb = mysql.connector.connect(
         host=settings['mySQL']['uri'],
@@ -173,6 +185,31 @@ def getRegistration(requestHandler):
         return
 
     if len(result) == 0:
+
+        #See if the opposite data profile will give us data
+        if prohibit_redirect != True:
+
+            #Redirect to the detailed data and see if it can return anything
+            if data_type == "simple":
+                tmpHeaders = []
+                tmpHeader = {}
+                tmpHeader['key'] = "location"
+                tmpHeader['value'] = "http://" + requestHandler.headers['Host'] + "/registration?" + column_name + "=" + query_value + "&detailed=true&prohibit_redirect=true"
+                tmpHeaders.append(tmpHeader)
+
+                responseHandler(requestHandler, 303, headers=tmpHeaders)
+                return
+
+            else:
+                tmpHeaders = []
+                tmpHeader = {}
+                tmpHeader['key'] = "location"
+                tmpHeader['value'] = "http://" + requestHandler.headers['Host'] + "/registration?" + column_name + "=" + query_value + "&detailed=false&prohibit_redirect=true"
+                tmpHeaders.append(tmpHeader)
+
+                responseHandler(requestHandler, 303, headers=tmpHeaders)
+                return
+
         responseHandler(requestHandler, 404)
         return
 
