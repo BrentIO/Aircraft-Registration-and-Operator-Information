@@ -151,7 +151,7 @@ Data is retained forever in the database and it is assumed the latest file impor
 |--------|-----------|---------------|-------------------|-----|
 | US FAA | Detailed | us-faa.py | Daily at 23:30 Central | https://registry.faa.gov/database/ReleasableAircraft.zip |
 | Transport Canada | Detailed | ca-tc.py | Unknown | https://wwwapps.tc.gc.ca/Saf-Sec-Sur/2/CCARCS-RIACC/download/ccarcsdb.zip |
-Mictronics IndexedDB | Summary | mictronics-indexeddb.py | Weekly on Sundays | https://www.mictronics.de/aircraft-database/indexedDB.php |
+Mictronics IndexedDB | Simple | mictronics-indexeddb.py | Weekly on Sundays | https://www.mictronics.de/aircraft-database/indexedDB.php |
 
 
 > Each agency's data is different and may take a number of minutes to import depending on the speed of your computer.
