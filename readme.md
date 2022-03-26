@@ -23,6 +23,13 @@ Python also requires a number of packages that must be installed:
 sudo pip3 install requests progress yaspin mysql-connector-python pymongo
 ```
 
+## Download and Install AROI
+Clone AROI from GitHub:
+```
+sudo git clone https://github.com/BrentIO/Aircraft-Registration-and-Operator-Information.git /etc/P5Software/AROI 
+```
+
+
 ### MySQL Configuration
 >Note, to exit the mysql command line, type `\q`
 
@@ -85,12 +92,6 @@ Create the tables in the database using the username, password, and database cre
 mysql -u aroi -p AROI < /etc/P5Software/AROI/mysql_create.sql
 ```
 
-
-## Download and Install AROI
-Clone AROI from GitHub:
-```
-sudo git clone https://github.com/BrentIO/Aircraft-Registration-and-Operator-Information.git /etc/P5Software/AROI 
-```
 
 ## Required Configuration
 You *must* configure these settings in the settings.json file.
