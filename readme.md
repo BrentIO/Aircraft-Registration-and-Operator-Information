@@ -65,7 +65,7 @@ mysql -u root -p
 
 Create the database, which will be named `AROI`:
 ```
-mysql> CREATE DATABASE AROI;
+CREATE DATABASE AROI;
 ```
 > If you use a different database name, adjust the steps below in this guide as well as the settings.json file.
 
