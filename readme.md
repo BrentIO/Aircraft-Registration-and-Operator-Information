@@ -24,6 +24,8 @@ sudo pip3 install requests progress yaspin mysql-connector-python pymongo
 ```
 
 ### MySQL Configuration
+>Note, to exit the mysql command line, type `\q`
+
 Log into MySQL:
 
 ```
