@@ -224,4 +224,4 @@ sudo python3 /etc/P5Software/AROI/ca-tc.py https://wwwapps.tc.gc.ca/Saf-Sec-Sur/
   - Try starting the service manually by using `sudo python3 api.py`.  If there is an error, it will usually be printed on the screen for you to see.
 
 ## Credits and Thanks
-- [Mictronics](https://github.com/mictronics) for the awesome work with the IndexedDB database.  They also make a really great ADS-B decoder.
+- [Mictronics](https://github.com/mictronics) for the awesome work with the IndexedDB database.  They also make a really great [ADS-B decoder](https://github.com/Mictronics/readsb).
