@@ -45,6 +45,11 @@ Change the root user to use a native password, in this case the root password wi
 ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
 ```
 
+Exit the command line
+```
+\q
+```
+
 If you are running MySQL on a separate server, you will need to allow non-localhost connections in MySQL.
 
 >   _Only perform this step if you are running MySQL on a separate server, or if you want to use MySQL Workbench on a separate computer._ 
@@ -85,6 +90,11 @@ Flush the privileges table to pick up the changes:
 
 ```
 FLUSH PRIVILEGES;
+```
+
+Exit the command line
+```
+\q
 ```
 
 Create the tables in the database using the username, password, and database created in the previous steps:
