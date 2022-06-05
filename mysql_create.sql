@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS `operators` (
   `callsign` varchar(45) NOT NULL,
   `country` varchar(45) NOT NULL,
   `hash` char(32) NOT NULL,
+  `source` INT NOT NULL,
   `created` datetime DEFAULT CURRENT_TIMESTAMP,
   `deleted` datetime DEFAULT NULL,
   PRIMARY KEY (`unique_id`),

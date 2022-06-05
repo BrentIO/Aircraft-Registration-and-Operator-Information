@@ -745,6 +745,7 @@ def export_operators():
             objCompleted['name'] = operator['name']
             objCompleted['callsign'] = operator['callsign']
             objCompleted['country'] = operator['country']
+            objCompleted['source'] = "Mictronics-IndexedDB"
             
             mysqlCur.execute(sqlInsert, (objCompleted['airline_designator'], objCompleted['name'], objCompleted['callsign'], objCompleted['country'], hashlib.md5(json.dumps(objCompleted).encode('utf-8')).hexdigest(), ))
 
@@ -771,7 +772,8 @@ def export_operators():
         mysqlCur.execute("UPDATE operators, \
                     (SELECT operators.unique_id FROM operators \
                     LEFT OUTER JOIN import_operators ON operators.airline_designator = import_operators.airline_designator \
-                    WHERE import_operators.airline_designator IS NULL AND operators.deleted IS NULL) as d \
+                    INNER JOIN sources ON sources.unique_id = operators.source \
+                    WHERE import_operators.airline_designator IS NULL AND operators.deleted IS NULL AND sources.agency = 'Mictronics-IndexedDB') as d \
                 SET operators.deleted = CURRENT_TIMESTAMP \
                 WHERE operators.unique_id = d.unique_id;")
 
@@ -791,7 +793,8 @@ def export_operators():
         mysqlCur.execute("UPDATE operators, \
                             (SELECT operators.unique_id FROM operators \
                                 INNER JOIN import_operators ON import_operators.airline_designator = operators.airline_designator and import_operators.hash <> operators.hash \
-                                WHERE operators.deleted IS NULL) AS d \
+                                INNER JOIN sources ON sources.unique_id = operators.source \
+                                WHERE operators.deleted IS NULL AND sources.agency = 'Mictronics-IndexedDB') AS d \
                         SET operators.deleted = CURRENT_TIMESTAMP \
                         WHERE operators.unique_id = d.unique_id ;")
 
@@ -808,9 +811,11 @@ def export_operators():
 
     with yaspin(text="Creating new operators...") as spinner:
 
-        mysqlCur.execute("INSERT INTO operators (airline_designator, name, callsign, country, hash) \
-                            (SELECT import_operators.airline_designator, import_operators.name, import_operators.callsign, import_operators.country, import_operators.hash FROM import_operators \
-                            LEFT OUTER JOIN operators on import_operators.airline_designator = operators.airline_designator) ON DUPLICATE KEY UPDATE deleted = NULL;")
+        mysqlCur.execute("INSERT INTO operators (airline_designator, name, callsign, country, hash, source) \
+                            (SELECT import_operators.airline_designator, import_operators.name, import_operators.callsign, import_operators.country, import_operators.hash, sources.unique_id FROM import_operators \
+                            LEFT OUTER JOIN operators on import_operators.airline_designator = operators.airline_designator \
+                            INNER JOIN sources on sources.unique_id = operators.source \
+                            WHERE sources.agency = 'Mictronics-IndexedDB') ON DUPLICATE KEY UPDATE deleted = NULL;")
 
         logger.info("Committing new operators to MySQL.")
         registrationsDb.commit()
