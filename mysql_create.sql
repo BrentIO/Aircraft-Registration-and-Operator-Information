@@ -74,7 +74,7 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 -- Table `operators`
 -- -----------------------------------------------------
-CREATE TABLE `operators` (
+CREATE TABLE IF NOT EXISTS `operators` (
   `unique_id` int NOT NULL AUTO_INCREMENT,
   `airline_designator` varchar(10) NOT NULL,
   `name` varchar(255) NOT NULL,
