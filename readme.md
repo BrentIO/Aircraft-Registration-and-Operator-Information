@@ -238,9 +238,9 @@ _Use of this agency is strongly recommended_
 
 `sudo crontab -e`
 
-Download the dataset and update the data weekly on Mondays at 04:20:
+Download the dataset and update the data weekly on Mondays at 05:10:
 ```
-20 4 * * 1 python3 /etc/P5Software/AROI/ourairports-airports.py https://davidmegginson.github.io/ourairports-data/airports.csv
+10 5 * * 1 python3 /etc/P5Software/AROI/ourairports-airports.py https://davidmegginson.github.io/ourairports-data/airports.csv
 ```
 
 Force the script to run now:
