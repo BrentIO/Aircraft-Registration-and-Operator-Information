@@ -28,7 +28,7 @@ DEALLOCATE PREPARE stmtUpdateData;
 
 CREATE TABLE IF NOT EXISTS `airports` (
   `icao_code` char(4) NOT NULL,
-  `iata_code` char(3) NOT NULL,
+  `iata_code` char(3) DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
   `city` varchar(100) DEFAULT NULL,
   `region` varchar(25) DEFAULT NULL,
