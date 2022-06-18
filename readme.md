@@ -1,8 +1,8 @@
 # Aircraft Registration and Operator Information
-Enrich ADS-B information with aircraft registration and operator data
+Enrich ADS-B information with aircraft registration, operator, flight, and airport data
 
 ## What Does it Do?
-Aircraft Registration and Operator Information (AROI) imports aircraft registrations and operator information from various sources, stores them in MySQL, and makes that data available to retrieve via API microservice.  It is designed to work as a microservice for [SkyFollower](https://github.com/BrentIO/SkyFollower).
+Aircraft Registration and Operator Information (AROI) imports aircraft registrations and operator information from various sources, stores them in MySQL, and makes that data available to retrieve via API microservice.  Additionally, it also provides information about airports and historical flight number information.  It is designed to work as a microservice for [SkyFollower](https://github.com/BrentIO/SkyFollower).
 
 ## How does it Work?
 
@@ -102,6 +102,11 @@ Create the tables in the database using the username, password, and database cre
 mysql -u aroi -p AROI < /etc/P5Software/AROI/mysql_create.sql
 ```
 
+For new installs and upgrades from earlier versions of AROI, execute the upgrade script:
+```
+mysql -u aroi -p AROI < /etc/P5Software/AROI/mysql_upgrade.sql
+```
+
 
 ## Required Configuration
 You *must* configure these settings in the settings.json file.
@@ -159,14 +164,15 @@ Data is retained forever in the database and it is assumed the latest file impor
 
 | Agency | Data Type | Import Script | Release Frequency | URL |
 |--------|-----------|---------------|-------------------|-----|
-| US FAA | Detailed | us-faa.py | Daily at 23:30 Central | https://registry.faa.gov/database/ReleasableAircraft.zip |
-| Transport Canada | Detailed | ca-tc.py | Unknown | https://wwwapps.tc.gc.ca/Saf-Sec-Sur/2/CCARCS-RIACC/download/ccarcsdb.zip |
-Mictronics IndexedDB | Simple | mictronics-indexeddb.py | Weekly on Sundays | https://www.mictronics.de/aircraft-database/indexedDB.php |
+| US FAA | Detailed Registration Data | us-faa.py | Daily at 23:30 Central | https://registry.faa.gov/database/ReleasableAircraft.zip |
+| Transport Canada | Detailed Registration Data | ca-tc.py | Unknown | https://wwwapps.tc.gc.ca/Saf-Sec-Sur/2/CCARCS-RIACC/download/ccarcsdb.zip |
+| Mictronics IndexedDB | Simple Registration Data | mictronics-indexeddb.py | Weekly on Sundays | https://www.mictronics.de/aircraft-database/indexedDB.php |
+| OurAirports | Airport Data | ourairports-airports.py | Daily | https://davidmegginson.github.io/ourairports-data/airports.csv |
 
 
 > Each agency's data is different and may take a number of minutes to import depending on the speed of your computer.
 
-### Mictronics IndexedDB
+### Mictronics IndexedDB Aircraft Registration
 
 _Use of this agency is strongly recommended_
 
@@ -188,7 +194,7 @@ sudo python3 /etc/P5Software/AROI/mictronics-indexeddb.py https://www.mictronics
 ```
 
 
-### United States FAA
+### United States FAA Aircraft Registration
 
 _Use of this agency is optional_
 
@@ -209,7 +215,7 @@ Force the script to run now:
 sudo python3 /etc/P5Software/AROI/us-faa.py https://registry.faa.gov/database/ReleasableAircraft.zip
 ```
 
-### Transport Canada
+### Transport Canada Aircraft Registration
 
 _Use of this agency is optional_
 
@@ -224,6 +230,23 @@ Force the script to run now:
 
 ```
 sudo python3 /etc/P5Software/AROI/ca-tc.py https://wwwapps.tc.gc.ca/Saf-Sec-Sur/2/CCARCS-RIACC/download/ccarcsdb.zip
+```
+
+### OurAirports Airports
+
+_Use of this agency is strongly recommended_
+
+`sudo crontab -e`
+
+Download the dataset and update the data weekly on Mondays at 04:20:
+```
+20 4 * * 1 python3 /etc/P5Software/AROI/ourairports-airports.py https://davidmegginson.github.io/ourairports-data/airports.csv
+```
+
+Force the script to run now:
+
+```
+sudo python3 /etc/P5Software/AROI/ourairports-airports.py https://davidmegginson.github.io/ourairports-data/airports.csv
 ```
 
 ## FAQ
