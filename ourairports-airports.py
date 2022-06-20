@@ -151,8 +151,6 @@ def exitApp(exitCode=None):
         logger.info("Committing database to disk.")
         import_sql.commit()
 
-    logger.debug("REMEMBER TO ENABLE FILE DELETION!")
-
     #Delete the temp folder if it exists
     if os.path.exists(settings['tempPath']) and exitCode == 0:
 
