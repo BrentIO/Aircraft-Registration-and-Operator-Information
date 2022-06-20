@@ -8,5 +8,12 @@
     "api": {
         "x-api-key": "5d95bb51-64b1-4269-b812-2e20e59cb3c5",
         "port": 8480
+    },
+    "flightAware" : {
+        "x-apikey" : "",
+        "max_pages" : 5,
+        "page_depth" : 3,
+        "sleep_duration_seconds" : 65,
+        "ttl_days" : 30
     }
 }
