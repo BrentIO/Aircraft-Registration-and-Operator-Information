@@ -407,6 +407,9 @@ def process_flights(arryFlights):
         if "origin" not in objFlight:
             raise Exception("'origin' missing from object.")
 
+        if "code_iata" not in objFlight['origin']:
+            raise Exception("'code_icao' missing from origin object.")
+
         if "code_icao" not in objFlight['origin']:
             raise Exception("'code_icao' missing from origin object.")
 
@@ -416,6 +419,18 @@ def process_flights(arryFlights):
         if "code_icao" not in objFlight['destination']:
             raise Exception("'code_icao' missing from destination object.")
 
+        if "diverted" not in objFlight:
+            raise Exception("'diverted' missing from object.")
+
+        if "cancelled" not in objFlight:
+            raise Exception("'cancelled' missing from object.")
+
+        if "status" not in objFlight:
+            raise Exception("'status' missing from object.")
+
+        if "fa_flight_id" not in objFlight:
+            raise Exception("'fa_flight_id' missing from object.")
+
         tmpFlight = flight()
 
         tmpFlight.operator = objFlight['operator_icao']
@@ -423,6 +438,24 @@ def process_flights(arryFlights):
         tmpFlight.ident = objFlight['ident_icao']
         tmpFlight.origin = objFlight['origin']['code_icao']
         tmpFlight.destination = objFlight['destination']['code_icao']
+
+        #Don't add flights that were diverted, cancelled, or result unknown
+        if objFlight['diverted'] == True:
+            logger.info("Skipping flight " + objFlight['fa_flight_id'] + " because the flight was marked as diverted.")
+            continue
+
+        if objFlight['cancelled'] == True:
+            logger.info("Skipping flight " + objFlight['fa_flight_id'] + " because the flight was marked as cancelled.")
+            continue
+
+        if str(objFlight['status']).lower().strip() == "result unknown":
+            logger.info("Skipping flight " + objFlight['fa_flight_id'] + " because the flight status was 'Result unknown'.")
+            continue
+
+        #Don't add flights with a missing IATA code (PUJ becomes KPUJ instead of MDPC, which is PUJ)
+        if objFlight['origin']['code_iata'] is None:
+            logger.info("Skipping flight " + objFlight['fa_flight_id'] + " because the origin -> code_iata was NULL.")
+            continue
 
         tmpFlight.commit()
 
