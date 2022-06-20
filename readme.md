@@ -2,10 +2,11 @@
 Enrich ADS-B information with aircraft registration, operator, flight, and airport data
 
 ## What Does it Do?
-Aircraft Registration and Operator Information (AROI) imports aircraft registrations and operator information from various sources, stores them in MySQL, and makes that data available to retrieve via API microservice.  Additionally, it also provides information about airports and historical flight number information.  It is designed to work as a microservice for [SkyFollower](https://github.com/BrentIO/SkyFollower).
+Aircraft Registration and Operator Information (AROI) imports aircraft registrations and operator information from various sources, stores them in MySQL, and makes that data available to retrieve via API microservice.  Additionally, it also provides information about airports and historical flight number information, which can be used to enrich ADS-B data.  It is designed to work as a microservice for [SkyFollower](https://github.com/BrentIO/SkyFollower).
+
 
 ## How does it Work?
-
+AROI is a repository of data, primarily from free offline sources, but also can be further enriched with online (for-profit) API calls to external services.  The stored data can be retrieved via an API call from services like SkyFollower.
 
 
 ## Prerequisites
@@ -119,6 +120,11 @@ sudo nano /etc/P5Software/AROI/settings.json
 ----------------|-----------|-------------|
 |`mySQL -> password`| my_clear_text_password | Clear text password to use when connecting to MySQL |
 | `api -> x-api-key` | 5d95bb51-64b1-4269-b812-2e20e59cb3c5 | Key used when to provide minimal security when accessing the API.   Any string of characters maybe used, or a new UUID generated. |
+|`flightAware -> x-apikey` | "" | The API key for FlightAware, if you choose to use any of the FlightAware data imports.|
+|`flightAware -> max_pages` | 5 | Maximum number pages of data that should be retrieved with each request, as an integer. See amplfied information in the FlightAware section of this document.|
+|`flightAware -> page_depth` | 3 | The number of times the "link" to the next page of data is followed as an integer, which is multiplied by the `max_pages`. See amplfied information in the FlightAware section of this document.|
+|`flightAware -> sleep_duration_seconds` | 65 | The number of seconds to wait between requests to FlightAware as an integer.  This number can be lowered for Premium or Standard subscriptions, but Personal subscriptions limit the number of API calls per minute.|
+|`flightAware -> ttl_days` | 30 | The number of days that the data will be considered valid, as an integer.  Modifying this number will not reduce your cost with FlightAware, but elongating it may result in inaccurate data as flight numbers change.|
 
 
 ## Optional Configuration
@@ -247,6 +253,37 @@ Force the script to run now:
 
 ```
 sudo python3 /etc/P5Software/AROI/ourairports-airports.py https://davidmegginson.github.io/ourairports-data/airports.csv
+```
+
+### FlightAware 
+
+_Use of this agency is optional_
+
+> **This Service <span style="color:red">Costs Real Money</span>**<br>  FlightAware is a commercial service which provides access to their data for a *fee*.  The use of this agency is optional, and could cost you ***significant*** amounts of money.  *By using this agency you agree not to hold the author(s) of this application responsible for any cost incurred by you, for any reason, including misconfiguration or defect.*
+
+#### General Information
+- FlightAware returns data back as "pages", which contain *up to* 15 results per page, and bills you for each page of results.  The setting `flightAware -> max_pages` controls the number of pages of results to request.  For example, with `flightAware -> max_pages` = 3, a maximum of 45 results will be returned by FlightAware.
+- The setting `flightAware -> page_depth` is a multiplier to the `max_pages` setting.  For example, if `max_pages` = 5, there will be 5 pages of data * 15 results per page = 75 results per request, with a link to retrieve the next set of 75 results.  `page_depth` indicates the number of times the `link` section of the response is followed.  To continue the example, if `page_depth` = 3, SkyFollower will follow the link two additional times, returning 75 results * 3 requests = 225 total results.
+- There is no mechanism to time-limit the results, so the best way to do so is to manipulate the `max_pages` and `page_depth` to meet your needs.  Additionally, scheduling this script to run at different times and on different days will greatly reduce the amount of repetitive data (read: wasted money) from calling the API's.
+- FlightAware also rate limits calls, which is handled using the `flightAware -> sleep_duration_seconds`.  Rate limits are automatically retried after this time elapses.
+
+#### Arrival and Scheduled Arrival Flight Information
+This application retrieves completed and scheduled arrival information from an ICAO code airport.  This is helpful for caching flight information to retrieve the origin airport without calling FlightAware for each request.  Data is stored in the `flight_numbers` table in SkyFollower and uses a time to live (TTL) for each record to ensure that aged records are not used, resulting in inaccurate data when requesting flight details.
+
+You can retrieve multiple airports by simply calling the script with different ICAO airport codes.
+
+`sudo crontab -e`
+
+Suggested: Retrieve the data twice per week, on at 11:00 Saturday and 18:00 Tuesday for Orlando International Airport (KMCO):
+```
+0 11 * * 6 python3 /etc/P5Software/AROI/flightaware-airport-flight-arrivals.py KMCO
+0 18 * * 2 python3 /etc/P5Software/AROI/flightaware-airport-flight-arrivals.py KMCO
+```
+
+Force the script to run now for Orlando International Airport (KMCO):
+
+```
+sudo python3 /etc/P5Software/AROI/flightaware-airport-flight-arrivals.py KMCO
 ```
 
 ## FAQ
