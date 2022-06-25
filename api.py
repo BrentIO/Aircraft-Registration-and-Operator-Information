@@ -663,7 +663,9 @@ class operator():
         self.source = str(source).strip()
         self.hash = ""
 
+
     def get(self):
+
         operatorsDb = mysql.connector.connect(
             host=settings['mySQL']['uri'],
             user=settings['mySQL']['username'],
@@ -699,8 +701,10 @@ class operator():
 
         return ENUM_RESULT.FAILED
 
+
     def toDict(self):
         return self.__dict__
+
 
     def compute_hash(self):
 
@@ -914,7 +918,6 @@ class operator():
         except Exception as ex:
             logger.error(ex)
             return {"status" : ENUM_RESULT.UNKNOWN_FAILURE, "message" : "Unknown failure, see log"}
-
 
 
 class ENUM_RESULT(Enum):
