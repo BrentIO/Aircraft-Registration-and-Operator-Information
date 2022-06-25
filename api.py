@@ -128,135 +128,68 @@ def registration_get(requestHandler, urlPath):
     if len(urlPath[2]) == 0:
         raise HTTPErrorResponse(status=400, message="Search criteria is required")
 
+    #See if the user specified the type, default to "simple"
+    if len(urlPath) == 4:
+        if urlPath[3] in ['simple', 'detailed']:
+            data_type = urlPath[3]
+        else:
+            raise HTTPErrorResponse(status=400, message="Parameter " + urlPath[3] + " is invalid")
+    else:
+        data_type = None
+
     if urlPath[1] == "registration":
-        column_name = "registration"
-        query_value = urlPath[2]
+        tmpRegistration = registration(registration=urlPath[2], data_type=data_type)
 
     if urlPath[1] == "icao_hex":
-        column_name = "icao_hex"
-        query_value = urlPath[2]
+        tmpRegistration = registration(icao_hex=urlPath[2], data_type=data_type)
 
-    #Parse the query string
-    queryString = parse.parse_qs(parse.urlsplit(requestHandler.path).query)
-
-
-    
-
-        
-        
-         #or len() == 0:
-        #raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is required")
-
-    tmpOperator = operator()
-
-    tmpOperator.designator = parse.unquote(urlPath[1]).strip()
-
-    getResult = tmpOperator.get()
+    getResult = tmpRegistration.get()
 
     #Ensure we have a result
-    if getResult == ENUM_RESULT.SUCCESS:
-        responseHandler(requestHandler, 200, body=tmpOperator.toDict())
+    if getResult['status'] == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 200, body=getResult['data'])
         return
 
-    if getResult == ENUM_RESULT.NOT_FOUND:
-        responseHandler(requestHandler, 404)
-        return
-    
-    if getResult == ENUM_RESULT.UNEXPECTED_RESULT:
-        responseHandler(requestHandler, 409)
-        return
+    if getResult['status'] == ENUM_RESULT.INVALID_REQUEST:
+        raise HTTPErrorResponse(status=400, message=getResult['message'])
 
-    responseHandler(requestHandler, 500)
+    if getResult['status'] == ENUM_RESULT.NOT_FOUND:
 
+        #Auto redirect to the opposite if possible
+        if requestHandler.headers.get('referer') is None:
 
+            tmpHeaders = []
+            tmpHeader = {}
+            tmpHeader['key'] = "referer"
+            tmpHeader['value'] = "http://" + requestHandler.headers['Host'] + requestHandler.path
+            tmpHeaders.append(tmpHeader)
+            tmpHeader = {}
 
+            tmpHeader['key'] = "location"
+            tmpHeader['value'] = "http://" + requestHandler.headers['Host'] + "/registration/" + str(urlPath[1]) + "/" +  str(urlPath[2])
 
-
-    
-
-
-
-
-
-    #Prevent cyclical requests
-    if "prohibit_redirect" in queryString:
-        prohibit_redirect = True
-    else:
-        prohibit_redirect = False
-
-    #Default to simple data
-    data_type = "simple"
-
-    if "detailed" in queryString:
-        if str(queryString['detailed'][0]).lower() == "true":
-            #Change to detailed data
-            data_type = "detailed"
-            
-    #Set the table name based on the data type
-    if data_type == "simple":
-        table_name = "simple"
-    else:
-        table_name = "registrations"
-
-    registrationDb = mysql.connector.connect(
-        host=settings['mySQL']['uri'],
-        user=settings['mySQL']['username'],
-        password=settings['mySQL']['password'],
-        database=settings['mySQL']['database'])
-
-    mysqlCur = registrationDb.cursor(dictionary=True)
-
-    mysqlCur.execute("SELECT " + table_name + ".data, sources.agency FROM " + table_name + " "\
-                        "INNER JOIN sources ON " + table_name + ".source = sources.unique_id " \
-                        "WHERE " + column_name + " = '" + query_value + "' AND " + table_name + ".deleted is null;")
-
-    result = mysqlCur.fetchall()
-
-    mysqlCur.close()
-    registrationDb.close()
-
-    #Ensure we have have exactly 1 row
-    if len(result) == 1:
-
-        #Move the agency into the result
-        returnValue = json.loads(result[0]['data'])
-        returnValue['source'] = result[0]['agency']
-        
-        responseHandler(requestHandler, 200, body=returnValue)
-        return
-
-    if len(result) == 0:
-
-        #See if the opposite data profile will give us data
-        if prohibit_redirect != True:
-
-            #Redirect to the detailed data and see if it can return anything
             if data_type == "simple":
-                tmpHeaders = []
-                tmpHeader = {}
-                tmpHeader['key'] = "location"
-                tmpHeader['value'] = "http://" + requestHandler.headers['Host'] + "/registration?" + column_name + "=" + query_value + "&detailed=true&prohibit_redirect=true"
+                tmpHeader['value'] = tmpHeader['value'] + "/detailed"
                 tmpHeaders.append(tmpHeader)
 
                 responseHandler(requestHandler, 303, headers=tmpHeaders)
                 return
 
             else:
-                tmpHeaders = []
-                tmpHeader = {}
-                tmpHeader['key'] = "location"
-                tmpHeader['value'] = "http://" + requestHandler.headers['Host'] + "/registration?" + column_name + "=" + query_value + "&detailed=false&prohibit_redirect=true"
+                tmpHeader['value'] = tmpHeader['value'] + "/simple"
                 tmpHeaders.append(tmpHeader)
 
                 responseHandler(requestHandler, 303, headers=tmpHeaders)
                 return
-
+        
         responseHandler(requestHandler, 404)
         return
+    
+    if getResult['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
+        raise HTTPErrorResponse(status=409, message=getResult['message'])
 
-    #Default to an error
-    logger.warning("Retrieved " + str(len(result)) + " records from MySQL when querying for registration for '" + "" + "'.  Expected 0 or 1.")
-    raise HTTPErrorResponse(status=409, message="Unexpected database response") 
+    #Default to a 500
+    raise HTTPErrorResponse()
 
 
 def operator_get(requestHandler, urlPath):
@@ -615,42 +548,71 @@ class flight():
 
 class registration():
 
-    def __init__(self):
-        self.category = ""
+    def __init__(self, icao_hex = None, registration = None, data_type = "simple"):
         self.icao_hex = ""
-        self.military = False
-        self.powerplant = {}
         self.registration = ""
-        self.type_designator = ""
-        self.manufacturer_model = ""
-        self.wake_turbulence_category = ""
-        self.source = ""
-        self.hash = ""
+
+        if icao_hex:
+            self.icao_hex = icao_hex
+        
+        if registration:
+            self.registration = registration
+
+        if data_type is None:
+            data_type = "simple"
+
+        self.data_type = data_type
+
+        if self.data_type not in ['simple', 'detailed']:
+            raise Exception("Unknown registration data type " + self.registration)    
 
     def get(self):
-        print("Here")
-        return
 
-    
+        operatorsDb = mysql.connector.connect(
+            host=settings['mySQL']['uri'],
+            user=settings['mySQL']['username'],
+            password=settings['mySQL']['password'],
+            database=settings['mySQL']['database'])
 
+        mysqlCur = operatorsDb.cursor(dictionary=True)
 
+        #Set the table name based on the data type
+        if self.data_type == "simple":
+            table_name = "simple"
+        else:
+            table_name = "registrations"
 
-    #{
-    #"category": "LandPlane",
-    #"icao_hex": "A666A5",
-    #"military": false,
-    #"powerplant": {
-    #    "type": "Jet",
-    #    "count": 2
-    #},
-    #"registration": "N511RH",
-    #"type_designator": "CL30",
-    #"manufacturer_model": "BOMBARDIER BD-100 Challenger 300",
-    #"wake_turbulence_category": "Medium",
-    #"source": "Mictronics-IndexedDB"
-    #}
+        if self.registration == "" and self.icao_hex == "":
+            return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "registration or icao_hex must be specified"}
 
-        
+        if self.registration !="":
+            mysqlCur.execute("SELECT " + table_name + ".data, sources.agency FROM " + table_name + " "\
+                "INNER JOIN sources ON " + table_name + ".source = sources.unique_id " \
+                "WHERE registration = '" + self.registration + "' AND " + table_name + ".deleted is null;")
+
+        if self.icao_hex != "":
+            mysqlCur.execute("SELECT " + table_name + ".data, sources.agency FROM " + table_name + " "\
+                "INNER JOIN sources ON " + table_name + ".source = sources.unique_id " \
+                "WHERE icao_hex = '" + self.icao_hex + "' AND " + table_name + ".deleted is null;")
+
+        result = mysqlCur.fetchall()
+
+        mysqlCur.close()
+        operatorsDb.close()
+
+        #Ensure we have have exactly 1 row
+        if len(result) == 1:
+            return {"status" : ENUM_RESULT.SUCCESS, "data" : json.loads(result[0]['data'])}
+
+        if len(result) == 0:
+            return {"status" : ENUM_RESULT.NOT_FOUND}
+
+        if len(result) > 1:
+            logger.warning("Retrieved " + str(len(result)) + " records from MySQL when querying " + json.dumps(self.__dict__, default=str) + ".  Expected 0 or 1.")
+            return {"status" : ENUM_RESULT.UNEXPECTED_RESULT, "message" : "Unexpected number of records returned " + str(len(result))}
+            
+        #Return unknown failure
+        return {"status" : ENUM_RESULT.UNKNOWN_FAILURE}
 
 
 class operator():
