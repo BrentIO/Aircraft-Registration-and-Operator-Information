@@ -10,95 +10,72 @@ import logging
 import logging.handlers as handlers
 import signal
 import mysql.connector #pip3 install mysql-connector-python
+from enum import Enum
+import hashlib
 
 
 def handle_interrupt(signal, frame):
     raise sigKill("SIGKILL Requested")
 
 
-class sigKill(Exception):
-    pass
+def setLogLevel(logLevel):
 
+    logLevel = logLevel.lower()
 
-class RequestHandler(http.server.SimpleHTTPRequestHandler):
-
-    #Create a conversation tracker for this request
-    def __init__(self, request, client_address, server):
-
-        http.server.SimpleHTTPRequestHandler.__init__(self, request, client_address, server)
-
-    def log_message(self, format, *args):
-        #Quiet the logs
+    if logLevel == "debug":
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Logging set to DEBUG.")
         return
 
-    def do_POST(self):
-        responseHandler(self, 405)
+    if logLevel == "error":
+        logger.setLevel(logging.ERROR)
+        logger.error("Logging set to ERROR.")
+        return
 
-    def do_OPTIONS(self):
+    if logLevel == "warning":
+        logger.setLevel(logging.WARNING)
+        logger.warning("Logging set to WARNING.")
+        return
 
-        tmpHeaders = []
+    if logLevel == "critical":
+        logger.setLevel(logging.CRITICAL)
+        logger.critical("Logging set to CRITICAL.")
+        return
 
+
+def responseHandler(requestHandler, status, headers=[], body="", contentType="application/json"):
+
+    #Send the HTTP status code requested
+    requestHandler.send_response(status)
+
+    if len(body) > 0:
         tmpHeader = {}
-        tmpHeader['key'] = 'Access-Control-Allow-Methods'
-        tmpHeader['value'] = "*"
-        tmpHeaders.append(tmpHeader)
+        tmpHeader['key'] = "Content-Type"
+        tmpHeader['value'] = contentType
+        headers.append(tmpHeader)
 
-        tmpHeader = {}
-        tmpHeader['key'] = 'Access-Control-Allow-Headers'
-        tmpHeader['value'] = "*"
-        tmpHeaders.append(tmpHeader)
+    tmpHeader = {}
+    tmpHeader['key'] = 'Access-Control-Allow-Origin'
+    tmpHeader['value'] = "*"
+    headers.append(tmpHeader)
 
-        responseHandler(self, 200, headers=tmpHeaders)
+    #Send each header to the caller
+    for header in headers:
+        requestHandler.send_header(header['key'], header['value'])
 
-    def do_GET(self):
+    #Send a blank line to the caller
+    requestHandler.end_headers()
 
-        try:
+    #Empty the headers
+    headers.clear()
 
-            #Ensure the correct key was sent
-            authenticate(self)
+    #Write the response body to the caller
+    if len(body) > 0:
 
-            #Get the operation requested by the user
-            operation = parse.urlsplit(self.path).path.replace("/", "")
-
-            if operation == "registration":
-                getRegistration(self)
-                return
-
-            if operation == "operator":
-                getOperator(self)
-                return
-
-            #All other requests get 404
-            responseHandler(self, 404)
-
-        except HTTPErrorResponse as ex:
-            responseHandler(self, ex.status, body={"error": ex.message})
-
-        except HTTPUnauthorizedResponse as ex:
-            responseHandler(self, ex.status)
-
-        except Exception as ex:
-            logger.error({"exception": ex})
-            responseHandler(self, 500, body={"error": "Unknown Error"})
-
-
-class HTTPErrorResponse(Exception):
-
-    #Custom error message wrapper
-
-    def __init__(self, status=500, message="Unknown Error"):
-        self.status = status
-        self.message = message
-        super().__init__(self.status, self.message)
-
-
-class HTTPUnauthorizedResponse(Exception):
-
-    #Custom unauthorized message wrapper
-
-    def __init__(self, status=401):
-        self.status = status
-        super().__init__(self.status)
+        if contentType == "application/json":
+            requestHandler.wfile.write(json.dumps(body).encode("utf8"))
+        else:
+            requestHandler.wfile.write(body)
 
 
 def authenticate(requestHandler):
@@ -112,30 +89,94 @@ def authenticate(requestHandler):
         raise HTTPUnauthorizedResponse(status=401)
 
 
-def getRegistration(requestHandler):
+def parseURL(path):
+
+    #Get the operation requested by the user
+    returnValue = parse.urlsplit(path).path.split("/")
+
+    #Remove the first element in the array, it's going to be empty
+    returnValue.pop(0)
+
+    #Clean up each element in the array
+    position = 0
+    
+    for element in returnValue:
+        returnValue[position] = parse.unquote(element).strip()
+        position = position + 1
+
+    return returnValue
+
+
+def parseBody(requestHandler):
+
+    #Ensure the data is JSON
+    if requestHandler.headers.get('Content-Type') != "application/json":
+        raise HTTPErrorResponse(status=415, message="Unexpected Content-Type; Send application/json")
+
+    content_len = int(requestHandler.headers.get('Content-Length'))
+    return json.loads(requestHandler.rfile.read(content_len))
+
+
+def registration_get(requestHandler, urlPath):
+
+    if len(urlPath) < 3:
+        raise HTTPErrorResponse(status=400, message="Parameter type (icao_hex|registration) and value is required")
+
+    if urlPath[1] not in ['icao_hex', 'registration']:
+        raise HTTPErrorResponse(status=400, message="Parameter type (icao_hex or registration) is required")
+
+    if len(urlPath[2]) == 0:
+        raise HTTPErrorResponse(status=400, message="Search criteria is required")
+
+    if urlPath[1] == "registration":
+        column_name = "registration"
+        query_value = urlPath[2]
+
+    if urlPath[1] == "icao_hex":
+        column_name = "icao_hex"
+        query_value = urlPath[2]
 
     #Parse the query string
     queryString = parse.parse_qs(parse.urlsplit(requestHandler.path).query)
 
-    #Ensure we have exactly 1 registration or icao_hex in the query string but not both
-    if "registration" not in queryString and "icao_hex" not in queryString:
-        raise HTTPErrorResponse(status=400, message="Either 'icao_hex' or 'registration' parameter is required")
 
-    if "registration" in queryString and "icao_hex" in queryString:
-        raise HTTPErrorResponse(status=400, message="Only one of 'icao_hex' or 'registration' parameter is allowed")
+    
 
-    #Ensure we only have 1 instance of either the registration or icao_hex
-    if "registration" in queryString:
-        if len(queryString['registration']) != 1:
-            raise HTTPErrorResponse(status=400, message="Exactly 1 registration must be supplied")
-        column_name = "registration"
-        query_value = queryString['registration'][0]
+        
+        
+         #or len() == 0:
+        #raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is required")
 
-    if "icao_hex" in queryString:
-        if len(queryString['icao_hex']) != 1:
-            raise HTTPErrorResponse(status=400, message="Exactly 1 icao_hex must be supplied")
-        column_name = "icao_hex"
-        query_value = queryString['icao_hex'][0]
+    tmpOperator = operator()
+
+    tmpOperator.designator = parse.unquote(urlPath[1]).strip()
+
+    getResult = tmpOperator.get()
+
+    #Ensure we have a result
+    if getResult == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 200, body=tmpOperator.toDict())
+        return
+
+    if getResult == ENUM_RESULT.NOT_FOUND:
+        responseHandler(requestHandler, 404)
+        return
+    
+    if getResult == ENUM_RESULT.UNEXPECTED_RESULT:
+        responseHandler(requestHandler, 409)
+        return
+
+    responseHandler(requestHandler, 500)
+
+
+
+
+
+    
+
+
+
+
 
     #Prevent cyclical requests
     if "prohibit_redirect" in queryString:
@@ -218,106 +259,673 @@ def getRegistration(requestHandler):
     raise HTTPErrorResponse(status=409, message="Unexpected database response") 
 
 
-def getOperator(requestHandler):
+def operator_get(requestHandler, urlPath):
 
-    #Parse the query string
-    queryString = parse.parse_qs(parse.urlsplit(requestHandler.path).query)
-
-    #Ensure we have an airline_designator in the query string and there is exactly 1 request
-    if "airline_designator" not in queryString:
+    if len(urlPath) < 2 or len(urlPath[1]) == 0:
+        logger.debug("Parameter 'airline_designator' is required" + str(urlPath))
         raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is required")
 
-    if "airline_designator" in queryString:
-        if len(queryString['airline_designator']) != 1:
-            raise HTTPErrorResponse(status=400, message="Exactly 1 airline_designator must be supplied")
+    tmpOperator = operator()
 
-    operatorsDb = mysql.connector.connect(
-        host=settings['mySQL']['uri'],
-        user=settings['mySQL']['username'],
-        password=settings['mySQL']['password'],
-        database=settings['mySQL']['database'])
+    tmpOperator.designator = parse.unquote(urlPath[1]).strip()
 
-    mysqlCur = operatorsDb.cursor(dictionary=True)
+    getResult = tmpOperator.get()
 
-    mysqlCur.execute("SELECT airline_designator, name, callsign, country FROM operators WHERE airline_designator = '" + str(queryString['airline_designator'][0]) + "' AND deleted is null;")
-
-    result = mysqlCur.fetchall()
-
-    mysqlCur.close()
-    operatorsDb.close()
-
-    #Ensure we have have exactly 1 row
-    if len(result) == 1:
-        responseHandler(requestHandler, 200, body=result[0])
+    #Ensure we have a result
+    if getResult == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 200, body=tmpOperator.toDict())
         return
 
-    if len(result) == 0:
+    if getResult == ENUM_RESULT.NOT_FOUND:
+        responseHandler(requestHandler, 404)
+        return
+    
+    if getResult == ENUM_RESULT.UNEXPECTED_RESULT:
+        responseHandler(requestHandler, 409)
+        return
+
+    #Default
+    logger.debug("Unhandled response in operator_get for data" + str(urlPath))
+    raise HTTPErrorResponse()
+
+
+def operator_post(requestHandler):
+
+    #Get the body from the post
+    body = parseBody(requestHandler)
+
+    #Verify the object passed has the correct parameters
+    if "designator" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'designator' is required")
+
+    if "name" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'name' is required")
+
+    if "callsign" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'callsign' is required")
+
+    if "country" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'country' is required")
+
+    if "source" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'source' is required")
+
+    newOperator = operator()
+
+    newOperator.designator = body['designator']
+    newOperator.name = body['name']
+    newOperator.callsign = body['callsign']
+    newOperator.country = body['country']
+    newOperator.source = body['source']
+
+    operator_postResponse = newOperator.post()
+
+    if operator_postResponse['status'] == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 204)
+        return
+
+    if operator_postResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
+        raise HTTPErrorResponse(status=409, message=operator_postResponse['message'])
+
+    if operator_postResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
+        raise HTTPErrorResponse(status=400, message=operator_postResponse['message'])
+
+    if operator_postResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
+        raise HTTPErrorResponse(status=500, message=operator_postResponse['message'])
+
+    #Default
+    logger.debug("Unhandled response in operator_post")
+    raise HTTPErrorResponse()
+
+
+def operator_patch(requestHandler, urlPath):
+
+    if len(urlPath) < 2 or len(urlPath[1]) == 0:
+        logger.debug("Parameter 'airline_designator' is required" + str(urlPath))
+        raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is required")
+
+    #Get the body from the post
+    body = parseBody(requestHandler)
+
+    #Verify the object passed has the correct parameters
+    if "designator" in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'designator' is not allowed in request body for this operation")
+
+    if "name" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'name' is required")
+
+    if "callsign" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'callsign' is required")
+
+    if "country" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'country' is required")
+
+    if "source" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'source' is required")
+
+    newOperator = operator(urlPath[1], body['name'], body['callsign'], body['country'], body['source'])
+
+    operator_patchResponse = newOperator.patch()
+
+    if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 204)
+        return
+
+    if operator_patchResponse['status'] == ENUM_RESULT.NOT_FOUND:
         responseHandler(requestHandler, 404)
         return
 
-    #Default to an error
-    logger.warning("Retrieved " + str(len(result)) + " records from MySQL when querying for operator '" + str(queryString['airline_designator'][0]) + "'.  Expected 0 or 1.")
-    raise HTTPErrorResponse(status=409, message="Unexpected database response") 
-       
+    if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
+        raise HTTPErrorResponse(status=409, message=operator_patchResponse['message'])
 
-def responseHandler(requestHandler, status, headers=[], body="", contentType="application/json"):
+    if operator_patchResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT or operator_patchResponse['status'] == ENUM_RESULT.INVALID_REQUEST:
+        raise HTTPErrorResponse(status=400, message=operator_patchResponse['message'])
 
-    #Send the HTTP status code requested
-    requestHandler.send_response(status)
+    if operator_patchResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
+        raise HTTPErrorResponse(status=500, message=operator_patchResponse['message'])
 
-    if len(body) > 0:
+    #Default
+    logger.debug("Unhandled response in operator_patch")
+    raise HTTPErrorResponse()
+
+
+def operator_delete(requestHandler, urlPath):
+
+    if len(urlPath) < 2 or len(urlPath[1]) == 0:
+        logger.debug("Parameter 'airline_designator' is required" + str(urlPath))
+        raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is required")
+
+    newOperator = operator(urlPath[1])
+
+    operator_patchResponse = newOperator.delete()
+
+    if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 204)
+        return
+
+    if operator_patchResponse['status'] == ENUM_RESULT.NOT_FOUND:
+        responseHandler(requestHandler, 404)
+        return
+
+    if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
+        raise HTTPErrorResponse(status=409, message=operator_patchResponse['message'])
+
+    if operator_patchResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
+        raise HTTPErrorResponse(status=400, message=operator_patchResponse['message'])
+
+    if operator_patchResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
+        raise HTTPErrorResponse(status=500, message=operator_patchResponse['message'])
+
+    #Default
+    logger.debug("Unhandled response in operator_delete")
+    raise HTTPErrorResponse()
+
+
+class sigKill(Exception):
+    pass
+
+
+class RequestHandler(http.server.SimpleHTTPRequestHandler):
+
+    #Create a conversation tracker for this request
+    def __init__(self, request, client_address, server):
+
+        http.server.SimpleHTTPRequestHandler.__init__(self, request, client_address, server)
+
+    def log_message(self, format, *args):
+        #Quiet the logs
+        return
+
+    def do_PATCH(self):
+
+        try:
+
+            #Ensure the correct key was sent
+            authenticate(self)
+
+            #Get the operation requested by the user
+            urlPath = parseURL(self.path)
+
+            if urlPath[0] == "operator":
+
+                operator_patch(self, urlPath)
+                return
+                         
+            #All other requests get 405
+            responseHandler(self, 405)
+
+        except HTTPErrorResponse as ex:
+            responseHandler(self, ex.status, body={"error": ex.message})
+
+        except HTTPUnauthorizedResponse as ex:
+            responseHandler(self, ex.status)
+
+        except Exception as ex:
+            logger.error({"exception": ex})
+            responseHandler(self, 500, body={"error": "Unknown Error"})
+
+    def do_DELETE(self):
+
+        try:
+
+            #Ensure the correct key was sent
+            authenticate(self)
+
+            #Get the operation requested by the user
+            urlPath = parseURL(self.path)
+
+            if urlPath[0] == "operator":
+
+                operator_delete(self, urlPath)
+                return
+                         
+            #All other requests get 405
+            responseHandler(self, 405)
+
+        except HTTPErrorResponse as ex:
+            responseHandler(self, ex.status, body={"error": ex.message})
+
+        except HTTPUnauthorizedResponse as ex:
+            responseHandler(self, ex.status)
+
+        except Exception as ex:
+            logger.error({"exception": ex})
+            responseHandler(self, 500, body={"error": "Unknown Error"})
+
+    def do_POST(self):
+        
+        try:
+
+            #Ensure the correct key was sent
+            authenticate(self)
+
+            #Get the operation requested by the user
+            urlPath = parseURL(self.path)
+
+            if urlPath[0] == "operator":
+
+                if len(urlPath) > 1:
+                    raise HTTPErrorResponse(status=400, message="Airline designator should not be provided when performing POST")
+
+                operator_post(self)
+                return
+             
+            #All other requests get 405
+            responseHandler(self, 405)
+
+        except HTTPErrorResponse as ex:
+            responseHandler(self, ex.status, body={"error": ex.message})
+
+        except HTTPUnauthorizedResponse as ex:
+            responseHandler(self, ex.status)
+
+        except Exception as ex:
+            logger.error({"exception": ex})
+            responseHandler(self, 500, body={"error": "Unknown Error"})
+
+    def do_OPTIONS(self):
+
+        tmpHeaders = []
+
         tmpHeader = {}
-        tmpHeader['key'] = "Content-Type"
-        tmpHeader['value'] = contentType
-        headers.append(tmpHeader)
+        tmpHeader['key'] = 'Access-Control-Allow-Methods'
+        tmpHeader['value'] = "*"
+        tmpHeaders.append(tmpHeader)
 
-    tmpHeader = {}
-    tmpHeader['key'] = 'Access-Control-Allow-Origin'
-    tmpHeader['value'] = "*"
-    headers.append(tmpHeader)
+        tmpHeader = {}
+        tmpHeader['key'] = 'Access-Control-Allow-Headers'
+        tmpHeader['value'] = "*"
+        tmpHeaders.append(tmpHeader)
 
-    #Send each header to the caller
-    for header in headers:
-        requestHandler.send_header(header['key'], header['value'])
+        responseHandler(self, 200, headers=tmpHeaders)
 
-    #Send a blank line to the caller
-    requestHandler.end_headers()
+    def do_GET(self):
 
-    #Empty the headers
-    headers.clear()
+        try:
 
-    #Write the response body to the caller
-    if len(body) > 0:
+            #Ensure the correct key was sent
+            authenticate(self)
 
-        if contentType == "application/json":
-            requestHandler.wfile.write(json.dumps(body).encode("utf8"))
-        else:
-            requestHandler.wfile.write(body)
+            #Get the operation requested by the user
+            urlPath = parseURL(self.path)
+
+            if urlPath[0] == "registration":
+                registration_get(self, urlPath)
+                return
+
+            if urlPath[0] == "operator":
+                operator_get(self, urlPath)
+                return
+
+            #All other requests get 404
+            responseHandler(self, 404)
+
+        except HTTPErrorResponse as ex:
+            responseHandler(self, ex.status, body={"error": ex.message})
+
+        except HTTPUnauthorizedResponse as ex:
+            responseHandler(self, ex.status)
+
+        except Exception as ex:
+            logger.error({"exception": ex})
+            responseHandler(self, 500, body={"error": "Unknown Error"})
 
 
-def setLogLevel(logLevel):
+class HTTPErrorResponse(Exception):
 
-    logLevel = logLevel.lower()
+    #Custom error message wrapper
 
-    if logLevel == "debug":
-        logger.setLevel(logging.DEBUG)
-        logger.debug("Logging set to DEBUG.")
+    def __init__(self, status=500, message="Unknown Error"):
+        self.status = status
+        self.message = message
+        super().__init__(self.status, self.message)
+
+
+class HTTPUnauthorizedResponse(Exception):
+
+    #Custom unauthorized message wrapper
+
+    def __init__(self, status=401):
+        self.status = status
+        super().__init__(self.status)
+
+
+class flight():
+
+    def __init__(self):
+        self.ident = ""
+        self.operator = operator()
+        self.origin = {}
+        self.destination = {}
+        self.source = ""
+        self.hash = ""
+
+    def get(self):
         return
 
-    if logLevel == "error":
-        logger.setLevel(logging.ERROR)
-        logger.error("Logging set to ERROR.")
+    def post(self):
         return
 
-    if logLevel == "warning":
-        logger.setLevel(logging.WARNING)
-        logger.warning("Logging set to WARNING.")
+    def patch(self):
         return
 
-    if logLevel == "critical":
-        logger.setLevel(logging.CRITICAL)
-        logger.critical("Logging set to CRITICAL.")
+    def delete(self):
         return
+
+
+class registration():
+
+    def __init__(self):
+        self.category = ""
+        self.icao_hex = ""
+        self.military = False
+        self.powerplant = {}
+        self.registration = ""
+        self.type_designator = ""
+        self.manufacturer_model = ""
+        self.wake_turbulence_category = ""
+        self.source = ""
+        self.hash = ""
+
+    def get(self):
+        print("Here")
+        return
+
+    
+
+
+
+    #{
+    #"category": "LandPlane",
+    #"icao_hex": "A666A5",
+    #"military": false,
+    #"powerplant": {
+    #    "type": "Jet",
+    #    "count": 2
+    #},
+    #"registration": "N511RH",
+    #"type_designator": "CL30",
+    #"manufacturer_model": "BOMBARDIER BD-100 Challenger 300",
+    #"wake_turbulence_category": "Medium",
+    #"source": "Mictronics-IndexedDB"
+    #}
+
+        
+
+
+class operator():
+
+    def __init__(self, designator = "", name = "", callsign = "", country="", source=""):
+        self.designator = str(designator).strip().upper()
+        self.name = str(name).strip()
+        self.callsign = str(callsign).strip().upper()
+        self.country = str(country).strip().upper()
+        self.source = str(source).strip()
+        self.hash = ""
+
+    def get(self):
+        operatorsDb = mysql.connector.connect(
+            host=settings['mySQL']['uri'],
+            user=settings['mySQL']['username'],
+            password=settings['mySQL']['password'],
+            database=settings['mySQL']['database'])
+
+        mysqlCur = operatorsDb.cursor(dictionary=True)
+
+        mysqlCur.execute("SELECT airline_designator, name, callsign, country, sources.agency AS source, hash FROM operators LEFT OUTER JOIN sources ON sources.unique_id = operators.source WHERE operators.airline_designator = '" + self.designator + "' AND operators.deleted is null;")
+
+        result = mysqlCur.fetchall()
+
+        mysqlCur.close()
+        operatorsDb.close()
+
+        #Ensure we have have exactly 1 row
+        if len(result) == 1:
+            self.designator = result[0]['airline_designator']
+            self.name = result[0]['name']
+            self.callsign = result[0]['callsign']
+            self.country = result[0]['country']
+            self.source = result[0]['source']
+            self.hash = result[0]['hash']
+
+            return ENUM_RESULT.SUCCESS
+
+        if len(result) == 0:
+            return ENUM_RESULT.NOT_FOUND
+
+        if len(result) > 1:
+            #Default to an error
+            logger.warning("Retrieved " + str(len(result)) + " records from MySQL when querying for operator '" + self.designator + "'.  Expected 0 or 1.")
+
+        return ENUM_RESULT.FAILED
+
+    def toDict(self):
+        return self.__dict__
+
+    def compute_hash(self):
+
+        objCompleted = {}
+
+        objCompleted['airline_designator'] = self.designator
+        objCompleted['name'] = self.name
+        objCompleted['callsign'] = self.callsign
+        objCompleted['country'] = self.country
+        objCompleted['source'] = self.source
+        self.hash = hashlib.md5(json.dumps(objCompleted).encode('utf-8')).hexdigest()
+
+
+    def post(self):
+
+        try:
+
+            returnValue = { 
+                "status" : ENUM_RESULT.UNKNOWN_FAILURE,
+                "message" : ""
+            }
+
+            if self.designator.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "designator is empty"}
+
+            if self.name.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "name is empty"}
+
+            if self.callsign.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "callsign is empty"}
+
+            if self.country.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "country is empty"}
+
+            if self.source.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "source is empty"}
+
+            self.designator = self.designator.strip().upper()
+            self.name = self.name.strip()
+            self.callsign = self.callsign.strip().upper()
+            self.country = self.country.strip().upper()
+            self.source = self.source.strip()
+            self.compute_hash()
+
+            operatorsDb = mysql.connector.connect(
+                host=settings['mySQL']['uri'],
+                user=settings['mySQL']['username'],
+                password=settings['mySQL']['password'],
+                database=settings['mySQL']['database'])
+
+            mysqlCur = operatorsDb.cursor()
+
+            #Ensure the source exists
+            mysqlCur.execute("INSERT INTO sources (agency) \
+                                SELECT * FROM (SELECT '" + self.source + "') AS tmp \
+                                WHERE NOT EXISTS ( \
+                                    SELECT agency FROM sources WHERE agency = '" + self.source + "' \
+                                ) LIMIT 1;")
+
+            #Insert the data
+            mysqlCur.execute("UPDATE operators SET deleted = now() WHERE source = (SELECT sources.unique_id FROM sources WHERE sources.agency = '" + self.source + "') AND airline_designator = '" + self.designator + "' AND operators.deleted is NULL")
+            
+            #Insert the data
+            mysqlCur.execute("INSERT INTO operators (airline_designator, name, callsign, country, hash, source) \
+                                (SELECT '" + self.designator + "','" + self.name + "','" + self.callsign + "','" + self.country + "','" + self.hash + "', sources.unique_id FROM sources \
+                                WHERE sources.agency = '" + self.source + "') ON DUPLICATE KEY UPDATE deleted = NULL;")
+
+            if mysqlCur.rowcount > 0:
+                returnValue = {"status" : ENUM_RESULT.SUCCESS, "message" : ""}
+            else:
+                if mysqlCur.rowcount == 0:
+                    returnValue = {"status" : ENUM_RESULT.SUCCESS_NOT_MODIFIED, "message" : "Resource exists and was not updated"}
+                if mysqlCur.rowcount < 0:
+                    returnValue = {"status" : ENUM_RESULT.UNEXPECTED_RESULT, "message" : "Unexpected row count"}
+                
+            operatorsDb.commit()
+            mysqlCur.close()
+            operatorsDb.close()
+
+            logger.info("POST operator " + self.designator + " hash " + self.hash)
+
+            return returnValue
+
+        except Exception as ex:
+            logger.error(ex)
+            return {"status" : ENUM_RESULT.UNKNOWN_FAILURE, "message" : "Unknown failure, see log"}
+
+
+    def patch(self):
+
+        try:
+
+            returnValue = { 
+                "status" : ENUM_RESULT.UNKNOWN_FAILURE,
+                "message" : ""
+            }
+
+            if self.designator.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "designator is empty"}
+
+            if self.name.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "name is empty"}
+
+            if self.callsign.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "callsign is empty"}
+
+            if self.country.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "country is empty"}
+
+            if self.source.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "source is empty"}
+
+            self.designator = self.designator.strip().upper()
+            self.name = self.name.strip()
+            self.callsign = self.callsign.strip().upper()
+            self.country = self.country.strip().upper()
+            self.source = self.source.strip()
+            self.compute_hash()
+
+            tmpCheckIfExists = operator(self.designator)
+
+            #Make sure the designator already exists
+            if tmpCheckIfExists.get() != ENUM_RESULT.SUCCESS:
+                return {"status" : ENUM_RESULT.NOT_FOUND}
+
+            operatorsDb = mysql.connector.connect(
+                host=settings['mySQL']['uri'],
+                user=settings['mySQL']['username'],
+                password=settings['mySQL']['password'],
+                database=settings['mySQL']['database'])
+
+            mysqlCur = operatorsDb.cursor()
+
+            #Ensure the source exists
+            mysqlCur.execute("INSERT INTO sources (agency) \
+                                SELECT * FROM (SELECT '" + self.source + "') AS tmp \
+                                WHERE NOT EXISTS ( \
+                                    SELECT agency FROM sources WHERE agency = '" + self.source + "' \
+                                ) LIMIT 1;")
+
+            #Insert the data
+            mysqlCur.execute("UPDATE operators SET deleted = now() WHERE source = (SELECT sources.unique_id FROM sources WHERE sources.agency = '" + self.source + "') AND airline_designator = '" + self.designator + "' AND hash <> '" + self.hash + "' AND operators.deleted is NULL")
+            
+            #Insert the data
+            mysqlCur.execute("INSERT INTO operators (airline_designator, name, callsign, country, hash, source) \
+                                (SELECT '" + self.designator + "','" + self.name + "','" + self.callsign + "','" + self.country + "','" + self.hash + "', sources.unique_id FROM sources \
+                                WHERE sources.agency = '" + self.source + "') ON DUPLICATE KEY UPDATE deleted = NULL;")
+
+            if mysqlCur.rowcount > 0 or mysqlCur.rowcount == 0:
+                returnValue = {"status" : ENUM_RESULT.SUCCESS}
+            else:
+                returnValue = {"status" : ENUM_RESULT.UNEXPECTED_RESULT, "message" : "Unexpected row count"}
+                
+            operatorsDb.commit()
+            mysqlCur.close()
+            operatorsDb.close()
+
+            logger.info("PATCH operator " + self.designator + " hash " + self.hash)
+
+            return returnValue
+
+        except Exception as ex:
+            logger.error(ex)
+            return {"status" : ENUM_RESULT.UNKNOWN_FAILURE, "message" : "Unknown failure, see log"}
+
+
+    def delete(self):
+
+        try:
+
+            returnValue = { 
+                "status" : ENUM_RESULT.UNKNOWN_FAILURE,
+                "message" : ""
+            }
+
+            if self.designator.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "designator is empty"}
+
+            self.designator = self.designator.strip().upper()
+
+            tmpCheckIfExists = operator(self.designator)
+
+            #Make sure the designator already exists
+            if tmpCheckIfExists.get() != ENUM_RESULT.SUCCESS:
+                return {"status" : ENUM_RESULT.NOT_FOUND}
+
+            operatorsDb = mysql.connector.connect(
+                host=settings['mySQL']['uri'],
+                user=settings['mySQL']['username'],
+                password=settings['mySQL']['password'],
+                database=settings['mySQL']['database'])
+
+            mysqlCur = operatorsDb.cursor()
+
+            #Insert the data
+            mysqlCur.execute("UPDATE operators SET deleted = now() WHERE airline_designator = '" + self.designator + "' AND operators.deleted is NULL")
+
+            if mysqlCur.rowcount == 1:
+                returnValue = {"status" : ENUM_RESULT.SUCCESS}
+            else:
+                returnValue = {"status" : ENUM_RESULT.NOT_FOUND, "message" : "Resource not found"}
+                
+            operatorsDb.commit()
+            mysqlCur.close()
+            operatorsDb.close()
+
+            logger.info("DELETE operator " + self.designator)
+
+            return returnValue
+
+        except Exception as ex:
+            logger.error(ex)
+            return {"status" : ENUM_RESULT.UNKNOWN_FAILURE, "message" : "Unknown failure, see log"}
+
+
+
+class ENUM_RESULT(Enum):
+    SUCCESS = 0
+    SUCCESS_NOT_MODIFIED = 1
+    FAILED = 100
+    UNKNOWN_FAILURE = 101
+    NOT_FOUND = 102
+    UNEXPECTED_RESULT = 103
+    INVALID_REQUEST = 104
+    UNSUPPORTED = 105
 
 
 def setup():
