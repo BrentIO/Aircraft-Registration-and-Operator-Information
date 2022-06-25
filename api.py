@@ -243,15 +243,15 @@ def operator_post(requestHandler):
     if "source" not in body:
         raise HTTPErrorResponse(status=400, message="Parameter 'source' is required")
 
-    newOperator = operator()
+    tmpOperator = operator()
 
-    newOperator.designator = body['designator']
-    newOperator.name = body['name']
-    newOperator.callsign = body['callsign']
-    newOperator.country = body['country']
-    newOperator.source = body['source']
+    tmpOperator.designator = body['designator']
+    tmpOperator.name = body['name']
+    tmpOperator.callsign = body['callsign']
+    tmpOperator.country = body['country']
+    tmpOperator.source = body['source']
 
-    operator_postResponse = newOperator.post()
+    operator_postResponse = tmpOperator.post()
 
     if operator_postResponse['status'] == ENUM_RESULT.SUCCESS:
         responseHandler(requestHandler, 204)
@@ -296,9 +296,9 @@ def operator_patch(requestHandler, urlPath):
     if "source" not in body:
         raise HTTPErrorResponse(status=400, message="Parameter 'source' is required")
 
-    newOperator = operator(urlPath[1], body['name'], body['callsign'], body['country'], body['source'])
+    tmpOperator = operator(urlPath[1], body['name'], body['callsign'], body['country'], body['source'])
 
-    operator_patchResponse = newOperator.patch()
+    operator_patchResponse = tmpOperator.patch()
 
     if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS:
         responseHandler(requestHandler, 204)
@@ -328,9 +328,9 @@ def operator_delete(requestHandler, urlPath):
         logger.debug("Parameter 'airline_designator' is required" + str(urlPath))
         raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is required")
 
-    newOperator = operator(urlPath[1])
+    tmpOperator = operator(urlPath[1])
 
-    operator_patchResponse = newOperator.delete()
+    operator_patchResponse = tmpOperator.delete()
 
     if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS:
         responseHandler(requestHandler, 204)
