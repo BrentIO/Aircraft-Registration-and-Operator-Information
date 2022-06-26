@@ -330,24 +330,24 @@ def operator_delete(requestHandler, urlPath):
 
     tmpOperator = operator(urlPath[1])
 
-    operator_patchResponse = tmpOperator.delete()
+    operator_deleteResponse = tmpOperator.delete()
 
-    if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS:
+    if operator_deleteResponse['status'] == ENUM_RESULT.SUCCESS:
         responseHandler(requestHandler, 204)
         return
 
-    if operator_patchResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
-        raise HTTPErrorResponse(status=400, message=operator_patchResponse['message'])
+    if operator_deleteResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
+        raise HTTPErrorResponse(status=400, message=operator_deleteResponse['message'])
 
-    if operator_patchResponse['status'] == ENUM_RESULT.NOT_FOUND:
+    if operator_deleteResponse['status'] == ENUM_RESULT.NOT_FOUND:
         responseHandler(requestHandler, 404)
         return
 
-    if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
-        raise HTTPErrorResponse(status=409, message=operator_patchResponse['message'])
+    if operator_deleteResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
+        raise HTTPErrorResponse(status=409, message=operator_deleteResponse['message'])
 
-    if operator_patchResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
-        raise HTTPErrorResponse(status=500, message=operator_patchResponse['message'])
+    if operator_deleteResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
+        raise HTTPErrorResponse(status=500, message=operator_deleteResponse['message'])
 
     #Default
     logger.debug("Unhandled response in operator_delete")
