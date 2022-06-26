@@ -377,7 +377,7 @@ def flight_info_get(requestHandler, urlPath):
     
     #Ensure we have a result
     if getResult == ENUM_RESULT.SUCCESS:
-        responseHandler(requestHandler, 200, body=tmpFlightInfo.flight)
+        responseHandler(requestHandler, 200, body=tmpFlightInfo.toDict())
         return
 
     if getResult == ENUM_RESULT.NOT_FOUND:
@@ -659,6 +659,16 @@ class flight_info():
     def delete(self):
         return
 
+    def toDict(self):
+
+        returnValue = {}
+
+        for key in self.__dict__['flight']:
+            if key in ['origin', 'destination']:
+                returnValue[key] = self.__dict__['flight'][key]
+
+        return returnValue
+
 
 class registration():
 
@@ -779,7 +789,12 @@ class operator():
 
 
     def toDict(self):
-        return self.__dict__
+        returnValue = {}
+
+        for key in self.__dict__:
+            if key in ['airline_designator', 'name', 'callsign', 'country']:
+                returnValue[key] = self.__dict__[key]
+        return returnValue
 
 
     def compute_hash(self):
