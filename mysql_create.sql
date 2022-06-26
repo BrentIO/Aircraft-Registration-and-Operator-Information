@@ -92,6 +92,27 @@ CREATE TABLE IF NOT EXISTS `operators` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
+-- -----------------------------------------------------
+-- Table `flight_numbers`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `flight_numbers` (
+  `unique_id` int NOT NULL AUTO_INCREMENT,
+  `airline_designator` char(3) DEFAULT NULL,
+  `flight_number` varchar(10) DEFAULT NULL,
+  `ident` varchar(10) DEFAULT NULL,
+  `origin` char(4) DEFAULT NULL,
+  `destination` char(4) DEFAULT NULL,
+  `expires` datetime DEFAULT NULL,
+  `source` int DEFAULT NULL,
+  `hash` char(32) DEFAULT NULL,
+  PRIMARY KEY (`unique_id`),
+  UNIQUE KEY `unique_id_UNIQUE` (`unique_id`),
+  UNIQUE KEY `hash` (`hash`,`ident`),
+  KEY `operating_flight_ident` (`ident`)
+) ENGINE=InnoDB AUTO_INCREMENT=593 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
