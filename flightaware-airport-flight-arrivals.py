@@ -151,7 +151,7 @@ def setup(args):
         cursor = import_sql.cursor()
 
         #Create the temporary tables in memory
-        cursor.execute("CREATE TABLE flight_numbers (operator text, flight_number text, ident text, origin text, destination text)")
+        cursor.execute("CREATE TABLE flight_numbers (airline_designator text, flight_number text, ident text, origin text, destination text)")
     
     except Exception as ex:
         logger.error(ex)
@@ -307,7 +307,7 @@ def export_data():
 
     with yaspin(text="Querying data from SQLite...") as spinner:
 
-        curFlightNumber.execute("SELECT operator, flight_number, ident, origin, destination FROM flight_numbers")
+        curFlightNumber.execute("SELECT airline_designator, flight_number, ident, origin, destination FROM flight_numbers")
 
         arrayFlightNumbers = curFlightNumber.fetchall()
 
@@ -334,11 +334,11 @@ def export_data():
 
     flightNumbersDb.commit()
     
-    mysqlCur.execute("CREATE TEMPORARY TABLE import (operator char(3), flight_number varchar(10), ident varchar(10), origin char(4), destination char(4), hash char(32), KEY hash (hash));")
+    mysqlCur.execute("CREATE TEMPORARY TABLE import (airline_designator char(3), flight_number varchar(10), ident varchar(10), origin char(4), destination char(4), hash char(32), KEY hash (hash));")
      
     logger.info("Exporting data to MySQL.")
 
-    sqlInsert = "INSERT INTO import (operator, flight_number, ident, origin, destination, hash) VALUES (%s,%s,%s,%s,%s,%s)"
+    sqlInsert = "INSERT INTO import (airline_designator, flight_number, ident, origin, destination, hash) VALUES (%s,%s,%s,%s,%s,%s)"
 
     with Bar("Exporting Data to MySQL...", max=len(arrayFlightNumbers)) as bar:
 
@@ -346,13 +346,13 @@ def export_data():
 
             objCompleted = {}
           
-            objCompleted['operator'] = objFlight['operator']
+            objCompleted['airline_designator'] = objFlight['airline_designator']
             objCompleted['flight_number'] = objFlight['flight_number']
             objCompleted['ident'] = objFlight['ident']
             objCompleted['origin'] = objFlight['origin']
             objCompleted['destination'] = objFlight['destination']
 
-            mysqlCur.execute(sqlInsert, (objCompleted['operator'], objCompleted['flight_number'], objCompleted['ident'], objCompleted['origin'], objCompleted['destination'], hashlib.md5(json.dumps(objCompleted).encode('utf-8')).hexdigest(), ))
+            mysqlCur.execute(sqlInsert, (objCompleted['airline_designator'], objCompleted['flight_number'], objCompleted['ident'], objCompleted['origin'], objCompleted['destination'], hashlib.md5(json.dumps(objCompleted).encode('utf-8')).hexdigest(), ))
 
             #Increment the bar
             bar.next()
@@ -374,8 +374,8 @@ def export_data():
 
     with yaspin(text="Creating new flight numbers...") as spinner:
 
-        mysqlCur.execute("INSERT INTO flight_numbers (operator, flight_number, ident, origin, destination, expires, hash, source) \
-                            (SELECT import.operator, import.flight_number, import.ident, import.origin, import.destination, DATE_ADD(NOW(), INTERVAL " + str(settings['flightAware']['ttl_days']) + " DAY), import.hash, sources.unique_id FROM import \
+        mysqlCur.execute("INSERT INTO flight_numbers (airline_designator, flight_number, ident, origin, destination, expires, hash, source) \
+                            (SELECT import.airline_designator, import.flight_number, import.ident, import.origin, import.destination, DATE_ADD(NOW(), INTERVAL " + str(settings['flightAware']['ttl_days']) + " DAY), import.hash, sources.unique_id FROM import \
                             LEFT OUTER JOIN sources ON sources.agency = 'FlightAware') ON DUPLICATE KEY UPDATE expires = DATE_ADD(NOW(), INTERVAL " + str(settings['flightAware']['ttl_days']) + " DAY);")
 
         logger.info("Committing new flight numbers to MySQL.")
@@ -433,7 +433,7 @@ def process_flights(arryFlights):
 
         tmpFlight = flight()
 
-        tmpFlight.operator = objFlight['operator_icao']
+        tmpFlight.airline_designator = objFlight['operator_icao']
         tmpFlight.flight_number = objFlight['flight_number']
         tmpFlight.ident = objFlight['ident_icao']
         tmpFlight.origin = objFlight['origin']['code_icao']
@@ -463,7 +463,7 @@ def process_flights(arryFlights):
 class flight():
 
     def __init__(self):
-        self.operator = ""
+        self.airline_designator = ""
         self.flight_number = ""
         self.ident = ""
         self.origin = ""
@@ -476,8 +476,8 @@ class flight():
 
         dbCursor = import_sql.cursor()
 
-        insert_statement = "INSERT INTO flight_numbers (operator, flight_number, ident, origin, destination) VALUES (?,?,?,?,?)"
-        parameters = (self.operator, self.flight_number, self.ident, self.origin, self.destination)
+        insert_statement = "INSERT INTO flight_numbers (airline_designator, flight_number, ident, origin, destination) VALUES (?,?,?,?,?)"
+        parameters = (self.airline_designator, self.flight_number, self.ident, self.origin, self.destination)
 
         #Insert the record into the table
         dbCursor.execute(insert_statement, parameters)
