@@ -304,15 +304,15 @@ def operator_patch(requestHandler, urlPath):
         responseHandler(requestHandler, 204)
         return
 
+    if operator_patchResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT or operator_patchResponse['status'] == ENUM_RESULT.INVALID_REQUEST:
+        raise HTTPErrorResponse(status=400, message=operator_patchResponse['message'])
+
     if operator_patchResponse['status'] == ENUM_RESULT.NOT_FOUND:
         responseHandler(requestHandler, 404)
         return
 
     if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
         raise HTTPErrorResponse(status=409, message=operator_patchResponse['message'])
-
-    if operator_patchResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT or operator_patchResponse['status'] == ENUM_RESULT.INVALID_REQUEST:
-        raise HTTPErrorResponse(status=400, message=operator_patchResponse['message'])
 
     if operator_patchResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
         raise HTTPErrorResponse(status=500, message=operator_patchResponse['message'])
@@ -336,15 +336,15 @@ def operator_delete(requestHandler, urlPath):
         responseHandler(requestHandler, 204)
         return
 
+    if operator_patchResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
+        raise HTTPErrorResponse(status=400, message=operator_patchResponse['message'])
+
     if operator_patchResponse['status'] == ENUM_RESULT.NOT_FOUND:
         responseHandler(requestHandler, 404)
         return
 
     if operator_patchResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
         raise HTTPErrorResponse(status=409, message=operator_patchResponse['message'])
-
-    if operator_patchResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
-        raise HTTPErrorResponse(status=400, message=operator_patchResponse['message'])
 
     if operator_patchResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
         raise HTTPErrorResponse(status=500, message=operator_patchResponse['message'])
