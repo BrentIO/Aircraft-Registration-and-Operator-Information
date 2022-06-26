@@ -156,7 +156,7 @@ def registration_get(requestHandler, urlPath):
     if getResult['status'] == ENUM_RESULT.NOT_FOUND:
 
         #Auto redirect to the opposite if possible
-        if requestHandler.headers.get('referer') is None:
+        if requestHandler.headers.get('referer') is None and data_type == None:
 
             tmpHeaders = []
             tmpHeader = {}
