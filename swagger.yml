@@ -740,10 +740,6 @@ components:
           maxLength: 45
           type: string
           description: Country of registration
-        source:
-          $ref: '#/components/schemas/source'
-        hash:
-          $ref: '#/components/schemas/hash'
 
     new_operator_request:
       type: object
@@ -998,8 +994,6 @@ components:
         name: British Airways
         callsign: SPEEDBIRD
         country: United Kingdom
-        source: Mictronics-IndexedDB
-        hash: 26053d5ea8a1609ed4d25de2732eb63d
 
     operator_DAL:
       value:
@@ -1007,8 +1001,6 @@ components:
         name: Delta Air Lines
         callsign: DELTA
         country: United States
-        source: Mictronics-IndexedDB
-        hash: 4c78deb4ed8c275b31cc894f89251565
 
     create_operator_BAW:
       value:
