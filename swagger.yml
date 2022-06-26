@@ -19,6 +19,7 @@ security:
 tags:
   - name: Aircraft and Registration Data
   - name: Airline Operator Data
+  - name: Flight Information
 
 paths:
 
@@ -234,7 +235,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/error_message'
-
 
   /registration/registration/{registration}:
     get:
@@ -534,6 +534,130 @@ paths:
               schema:
                 $ref: '#/components/schemas/error_message'
 
+  /flight:
+    post:
+      tags:
+       - Flight Information
+      description: Create a new flight number
+      summary: Create a new flight number
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/new_flight_request'
+            examples:
+              Delta Flight 2 LHR to JFK:
+                $ref: '#/components/examples/create_flight_dal2'
+              British Airways Flight 2167 LGW to TPA:
+                $ref: '#/components/examples/create_flight_baw2167'  
+      responses:
+        204:
+          description: OK
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/flight_invalid_request'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+
+  /flight/{ident}:
+    get:
+      tags:
+       - Flight Information
+      description: Retrieve a flight by its identifier
+      summary: Retrieve a flight by its identifier
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flight_ident'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/flight_response'
+              examples:
+                Delta Flight 2:
+                  $ref: '#/components/examples/get_flight_DAL2'
+                British Airways 60T:
+                  $ref: '#/components/examples/get_flight_BAW60T'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/flight_invalid_request'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+
+  /flight/{ident}/{origin}/{destination}:
+    delete:
+      tags:
+       - Flight Information
+      description: Delete an flight number for a given identifier, origin, and destination
+      summary: Delete flight number
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/flight_ident'
+        - $ref: '#/components/parameters/origin'
+        - $ref: '#/components/parameters/destination'
+      responses:
+        204:
+          description: OK
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/flight_invalid_request'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
 
 components:
 
@@ -669,11 +793,87 @@ components:
     hash:
       minLength: 32
       maxLength: 32
+    icao_airport_code:
+      maxLength: 4
       type: string
       readOnly: true
       description: Unique hash for the data contained in the record, used for easily identifying duplicates     
 
   
+    flight_number:
+      maxLength: 10
+      type: string
+      description: Alpha-numeric flight number not inclusive of the operator
+      example: "2"
+
+    flight_ident:
+      maxLength: 10
+      type: string
+      description: Alpha-numeric flight identifier used to semi-uniquely identify the flight
+      example: DAL2
+
+    flight_expiration_date:
+      type: string
+      writeOnly: true
+      format: date-time
+      description: Date the flight entry will expire in ISO 8601 format
+
+    new_flight_request:
+      type: object
+      properties:
+        ident:
+          $ref: '#/components/schemas/flight_ident'
+        airline_designator:
+          $ref: '#/components/schemas/icao_airline_designator'
+        flight_number:
+          $ref: '#/components/schemas/flight_number'
+        source:
+          $ref: '#/components/schemas/source'
+        origin:
+          $ref: '#/components/schemas/icao_airport_code'
+        destination:
+          $ref: '#/components/schemas/icao_airport_code'
+        expires:
+          $ref: '#/components/schemas/flight_expiration_date'
+
+    airport:
+      type: object
+      properties:
+        icao_code: 
+          $ref: '#/components/schemas/icao_airport_code'
+        name:
+          type: string
+          maxLength: 255
+          description: Legal name of the airport
+        city:
+          type: string
+          maxLength: 100
+          description: Name of the city where the airport is located
+        region:
+          type: string
+          maxLength: 25
+          description: ISO region in which the city is located
+        country:
+          type: string
+          maxLength: 2
+          description: ISO country code in which the region is located
+        phonic:
+          type: string
+          description: Naturally spoken name of the airport name and location        
+
+    flight_response:
+      type: object
+      properties:
+        airline_designator:
+          $ref: '#/components/schemas/icao_airline_designator'
+        flight_number:
+          $ref: '#/components/schemas/flight_number'
+        origin:
+          $ref: '#/components/schemas/airport'
+        destination:
+          $ref: '#/components/schemas/airport'
+
+
   examples:
 
     registration_invalid_request:
@@ -685,6 +885,11 @@ components:
       description: The airline_designator parameter was not provided
       value:
         error: Parameter 'airline_designator' is required.
+
+    flight_invalid_request:
+      description: The ident parameter was not provided
+      value:
+        error: Parameter 'ident' is required
 
     simple_registration_US:
       value:
@@ -823,6 +1028,65 @@ components:
         country: United States
         source: Mictronics-IndexedDB
 
+    create_flight_dal2:
+      description: Flight between London-Heathrow and New York John F. Kennedy.  Data is provided by FlightAware, and will use the default expiration (30 days).
+      value:
+        ident: DAL2
+        airline_designator: DAL
+        flight_number: "2"
+        source: FlightAware #Sorry
+        origin: EGLL
+        destination: KJFK
+
+    create_flight_baw2167:
+      description: Flight between London-Gatwick and Tampa.  Data is provided by FlightAware, and will not expire until January 5, 2027 at 17:05 Eastern Time.  Note the ident does not match the flight number.
+      value:
+        ident: BAW60T
+        airline_designator: BAW
+        flight_number: "2167"
+        source: FlightAware #Sorry
+        origin: EGKK
+        destination: KTPA
+        expires: "2027-01-05T17:05:00-05:00"
+
+    get_flight_DAL2:
+      value:
+        airline_designator: DAL
+        flight_number: "2"
+        origin:
+          icao_code: EGLL
+          name: London Heathrow Airport
+          city: London
+          region: GB-ENG
+          country: GB
+          phonic: London Heathrow
+        destination:
+          icao_code: KJFK
+          name: John F Kennedy International Airport
+          city: New York
+          region: US-NY
+          country: US
+          phonic: New York John F Kennedy
+
+    get_flight_BAW60T:
+      value:
+        airline_designator: BAW
+        flight_number: "2167"
+        origin:
+          icao_code: EGKK
+          name: London Gatwick Airport
+          city: London
+          region: GB-ENG
+          country: GB
+          phonic: London Gatwick
+        destination:
+          icao_code: KTPA
+          name: Tampa International Airport
+          city: Tampa
+          region: US-FL
+          country: US
+          phonic: Tampa
+
 
   parameters:
 
@@ -853,6 +1117,32 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/aircraft_registration'
+
+    flight_ident:
+      in: path
+      name: ident
+      description: Alpha-numeric flight identifier used to semi-uniquely identify the flight
+      required: true
+      schema:
+        $ref: '#/components/schemas/flight_ident'
+
+    origin:
+      in: path
+      name: origin
+      required: true
+      description: Origin airport for the flight
+      example: EGLL
+      schema:
+        $ref: '#/components/schemas/icao_airport_code'
+
+    destination:
+      in: path
+      name: destination
+      description: Destination airport for the flight
+      example: KJFK
+      required: true
+      schema:
+        $ref: '#/components/schemas/icao_airport_code'
 
     referer:
       in: header
