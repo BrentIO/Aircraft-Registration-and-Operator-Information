@@ -24,6 +24,7 @@ paths:
 
   /operator:
     get:
+      deprecated: true
       tags:
        - Airline Operator Data
       description: Retrieve airline operator information by ICAO airline designator.
