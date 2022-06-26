@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from datetime import datetime, timedelta
 import http.server
 import socketserver
 from urllib import parse
@@ -393,6 +393,108 @@ def flight_info_get(requestHandler, urlPath):
     raise HTTPErrorResponse()
 
 
+def flight_info_post(requestHandler):
+
+    #Get the body from the post
+    body = parseBody(requestHandler)
+
+    #Verify the object passed has the correct parameters
+    if "ident" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'ident' is required")
+
+    if "airline_designator" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is required")
+
+    if "flight_number" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'flight_number' is required")
+
+    if "origin" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'origin' is required")
+
+    if "destination" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'destination' is required")
+
+    if "source" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'source' is required")
+
+    tmpFlight = flight_info(ident=body['ident'])
+
+    tmpFlight.airline_designator = body['airline_designator']
+    tmpFlight.flight_number = body['flight_number']
+    tmpFlight.origin['icao_code'] = str(body['origin'])
+    tmpFlight.destination['icao_code'] = str(body['destination'])
+    tmpFlight.source = body['source']
+
+    if 'expires' in body:
+        tmpFlight.expires = datetime.fromisoformat(body['expires'])
+        
+    flight_postResponse = tmpFlight.post()
+
+    if flight_postResponse['status'] == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 204)
+        return
+
+    if flight_postResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
+        raise HTTPErrorResponse(status=409, message=flight_postResponse['message'])
+
+    if flight_postResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
+        raise HTTPErrorResponse(status=400, message=flight_postResponse['message'])
+
+    if flight_postResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
+        raise HTTPErrorResponse(status=500, message=flight_postResponse['message'])
+
+    #Default
+    logger.debug("Unhandled response in flight_post")
+    raise HTTPErrorResponse()
+
+
+def flight_info_delete(requestHandler, urlPath):
+
+    #/flights/{ident}/{origin_airport_icao_code}/{destination_airport_icao_code}
+
+    if len(urlPath) < 4:
+        raise HTTPErrorResponse(status=400, message="Insufficient number of parameters provided")
+
+    if len(urlPath[1]) == 0:
+        logger.debug("Parameter 'ident' is required" + str(urlPath))
+        raise HTTPErrorResponse(status=400, message="Parameter 'ident' is required")
+
+    if len(urlPath[2]) == 0:
+        logger.debug("Parameter 'origin_airport_icao_code' is required" + str(urlPath))
+        raise HTTPErrorResponse(status=400, message="Parameter 'origin_airport_icao_code' is required")
+
+    if len(urlPath[3]) == 0:
+        logger.debug("Parameter 'destination_airport_icao_code' is required" + str(urlPath))
+        raise HTTPErrorResponse(status=400, message="Parameter 'destination_airport_icao_code' is required")
+
+    tmpFlight = flight_info(urlPath[1])
+    tmpFlight.origin['icao_code'] = urlPath[2]
+    tmpFlight.destination['icao_code'] = urlPath[3]
+
+    flight_deleteResponse = tmpFlight.delete()
+
+    if flight_deleteResponse['status'] == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 204)
+        return
+
+    if flight_deleteResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
+        raise HTTPErrorResponse(status=400, message=flight_deleteResponse['message'])
+
+    if flight_deleteResponse['status'] == ENUM_RESULT.NOT_FOUND:
+        responseHandler(requestHandler, 404)
+        return
+
+    if flight_deleteResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
+        raise HTTPErrorResponse(status=409, message=flight_deleteResponse['message'])
+
+    if flight_deleteResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
+        raise HTTPErrorResponse(status=500, message=flight_deleteResponse['message'])
+
+    #Default
+    logger.debug("Unhandled response in flight_info_delete")
+    raise HTTPErrorResponse()
+
+
 class sigKill(Exception):
     pass
 
@@ -447,8 +549,11 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             urlPath = parseURL(self.path)
 
             if urlPath[0] == "operator":
-
                 operator_delete(self, urlPath)
+                return
+
+            if urlPath[0] == "flight":
+                flight_info_delete(self, urlPath)
                 return
                          
             #All other requests get 405
@@ -475,11 +580,17 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             urlPath = parseURL(self.path)
 
             if urlPath[0] == "operator":
-
                 if len(urlPath) > 1:
-                    raise HTTPErrorResponse(status=400, message="Airline designator should not be provided when performing POST")
+                    raise HTTPErrorResponse(status=400, message="Airline designator should not be provided in path when performing POST")
 
                 operator_post(self)
+                return
+
+            if urlPath[0] == "flight":
+                if len(urlPath) > 1:
+                    raise HTTPErrorResponse(status=400, message="Flight ident should not be provided in path when performing POST")
+
+                flight_info_post(self)
                 return
              
             #All other requests get 405
@@ -570,11 +681,13 @@ class flight_info():
 
     def __init__(self, ident, focus_airport_icao_code = None):
         self.ident = ""
-        self.flight = {}
-        self.flight['origin'] = {}
-        self.flight['destination'] = {}
-        self.flight['source'] = ""
-        self.flight['hash'] = ""
+        self.airline_designator = ""
+        self.flight_number = ""
+        self.origin = {}
+        self.destination = {}
+        self.expires = None
+        self.source = ""
+        self.hash = ""
 
         self.focus_airport_icao_code = focus_airport_icao_code
         self.ident = ident
@@ -590,6 +703,9 @@ class flight_info():
         mysqlCur = operatorsDb.cursor(dictionary=True)
 
         sqlQuery = "SELECT "\
+                "flight_numbers.airline_designator, "\
+                "flight_numbers.flight_number, "\
+                "flight_numbers.expires, "\
                 "origin_airport.icao_code AS origin_airport_icao_code, "\
                 "origin_airport.name AS origin_airport_name, "\
                 "origin_airport.city AS origin_airport_city, "\
@@ -624,20 +740,23 @@ class flight_info():
 
         #Ensure we have have exactly 1 row
         if len(result) == 1:
-            self.flight['origin']['icao_code'] = result[0]['origin_airport_icao_code']
-            self.flight['origin']['name'] = result[0]['origin_airport_name']
-            self.flight['origin']['city'] = result[0]['origin_airport_city']
-            self.flight['origin']['region'] = result[0]['origin_airport_region']
-            self.flight['origin']['country'] = result[0]['origin_airport_country']
-            self.flight['origin']['phonic'] = result[0]['origin_airport_phonic']
-            self.flight['destination']['icao_code'] = result[0]['destination_airport_icao_code']
-            self.flight['destination']['name'] = result[0]['destination_airport_name']
-            self.flight['destination']['city'] = result[0]['destination_airport_city']
-            self.flight['destination']['region'] = result[0]['destination_airport_region']
-            self.flight['destination']['country'] = result[0]['destination_airport_country']
-            self.flight['destination']['phonic'] = result[0]['destination_airport_phonic']
-            self.flight['source'] = result[0]['source']
-            self.flight['hash'] = result[0]['hash']
+            self.airline_designator = result[0]['airline_designator']
+            self.flight_number = result[0]['flight_number']
+            self.expires = result[0]['expires']
+            self.origin['icao_code'] = result[0]['origin_airport_icao_code']
+            self.origin['name'] = result[0]['origin_airport_name']
+            self.origin['city'] = result[0]['origin_airport_city']
+            self.origin['region'] = result[0]['origin_airport_region']
+            self.origin['country'] = result[0]['origin_airport_country']
+            self.origin['phonic'] = result[0]['origin_airport_phonic']
+            self.destination['icao_code'] = result[0]['destination_airport_icao_code']
+            self.destination['name'] = result[0]['destination_airport_name']
+            self.destination['city'] = result[0]['destination_airport_city']
+            self.destination['region'] = result[0]['destination_airport_region']
+            self.destination['country'] = result[0]['destination_airport_country']
+            self.destination['phonic'] = result[0]['destination_airport_phonic']
+            self.source = result[0]['source']
+            self.hash = result[0]['hash']
             return ENUM_RESULT.SUCCESS
 
         if len(result) == 0:
@@ -651,24 +770,159 @@ class flight_info():
         return {"status" : ENUM_RESULT.UNKNOWN_FAILURE}
 
     def post(self):
-        return
 
-    def patch(self):
-        return
+        try:
+
+            returnValue = { 
+                "status" : ENUM_RESULT.UNKNOWN_FAILURE,
+                "message" : ""
+            }
+
+            if self.ident.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "ident is empty"}
+
+            if self.airline_designator.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "airline_designator is empty"}
+
+            if self.flight_number.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "flight_number is empty"}
+
+            if "icao_code" not in self.origin:
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "origin icao_code is missing"}
+
+            if self.origin['icao_code'].strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "origin icao_code is empty"}
+
+            if "icao_code" not in self.destination:
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "destination icao_code is missing"}
+
+            if self.destination['icao_code'].strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "destination icao_code is empty"}
+
+            if self.source.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "source is empty"}
+
+            #If no expiration is provided, default to 30 days
+            if self.expires == None:
+                self.expires = datetime.now() + timedelta(days=30)               
+
+            self.ident = self.ident.strip().upper()
+            self.airline_designator = self.airline_designator.strip().upper()
+            self.flight_number = self.flight_number.strip().upper()
+            self.origin['icao_code'] = self.origin['icao_code'].strip().upper()
+            self.destination['icao_code'] = self.destination['icao_code'].strip().upper()
+            self.source = self.source.strip()
+            self.compute_hash()
+
+            operatorsDb = mysql.connector.connect(
+                host=settings['mySQL']['uri'],
+                user=settings['mySQL']['username'],
+                password=settings['mySQL']['password'],
+                database=settings['mySQL']['database'])
+
+            mysqlCur = operatorsDb.cursor()
+
+            #Ensure the source exists
+            mysqlCur.execute("INSERT INTO sources (agency) \
+                                SELECT * FROM (SELECT '" + self.source + "') AS tmp \
+                                WHERE NOT EXISTS ( \
+                                    SELECT agency FROM sources WHERE agency = '" + self.source + "' \
+                                ) LIMIT 1;")
+            
+            #Insert the data
+            mysqlCur.execute("INSERT INTO flight_numbers (airline_designator, flight_number, ident, origin, destination, expires, hash, source) \
+                                (SELECT '" + self.airline_designator + "','" + self.flight_number + "','" + self.ident + "','" + self.origin['icao_code'] + "','" + self.destination['icao_code'] + "','" + self.expires.strftime('%Y-%m-%d %H:%M:%S') + "','" + self.hash + "', sources.unique_id FROM sources \
+                                WHERE sources.agency = '" + self.source + "') ON DUPLICATE KEY UPDATE expires = '" + self.expires.strftime('%Y-%m-%d %H:%M:%S') + "';")
+
+            if mysqlCur.rowcount > 0:
+                returnValue = {"status" : ENUM_RESULT.SUCCESS, "message" : ""}
+            else:
+                if mysqlCur.rowcount == 0:
+                    returnValue = {"status" : ENUM_RESULT.SUCCESS_NOT_MODIFIED, "message" : "Resource exists and was not updated"}
+                if mysqlCur.rowcount < 0:
+                    returnValue = {"status" : ENUM_RESULT.UNEXPECTED_RESULT, "message" : "Unexpected row count"}
+                
+            operatorsDb.commit()
+            mysqlCur.close()
+            operatorsDb.close()
+
+            logger.info("POST flight numbers ident " + self.ident + " hash " + self.hash)
+
+            return returnValue
+
+        except Exception as ex:
+            logger.error(ex)
+            return {"status" : ENUM_RESULT.UNKNOWN_FAILURE, "message" : "Unknown failure, see log"}
 
     def delete(self):
-        return
+
+        try:
+
+            returnValue = { 
+                "status" : ENUM_RESULT.UNKNOWN_FAILURE,
+                "message" : ""
+            }
+
+            if self.ident.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "ident is empty"}
+
+            self.airline_designator = self.airline_designator.strip().upper()
+
+            tmpCheckIfExists = flight_info(self.ident)
+
+            #Make sure the airline_designator already exists
+            if tmpCheckIfExists.get() != ENUM_RESULT.SUCCESS:
+                return {"status" : ENUM_RESULT.NOT_FOUND}
+
+            operatorsDb = mysql.connector.connect(
+                host=settings['mySQL']['uri'],
+                user=settings['mySQL']['username'],
+                password=settings['mySQL']['password'],
+                database=settings['mySQL']['database'])
+
+            mysqlCur = operatorsDb.cursor()
+
+            #Insert the data
+            mysqlCur.execute("UPDATE flight_numbers SET expires = now() WHERE ident = '" + self.ident + "' AND origin = '" + self.origin['icao_code'] + "' AND destination = '" + self.destination['icao_code'] + "' AND expires > now()")
+
+            if mysqlCur.rowcount == 1:
+                returnValue = {"status" : ENUM_RESULT.SUCCESS}
+            else:
+                returnValue = {"status" : ENUM_RESULT.NOT_FOUND, "message" : "Resource not found"}
+                
+            operatorsDb.commit()
+            mysqlCur.close()
+            operatorsDb.close()
+
+            logger.info("DELETE flight " + self.ident)
+
+            return returnValue
+
+        except Exception as ex:
+            logger.error(ex)
+            return {"status" : ENUM_RESULT.UNKNOWN_FAILURE, "message" : "Unknown failure, see log"}
 
     def toDict(self):
 
         returnValue = {}
 
-        for key in self.__dict__['flight']:
-            if key in ['origin', 'destination']:
-                returnValue[key] = self.__dict__['flight'][key]
+        for key in self.__dict__:
+            if key in ['airline_designator', 'flight_number', 'origin', 'destination']:
+                returnValue[key] = self.__dict__[key]
 
         return returnValue
 
+    def compute_hash(self):
+
+        tmpObj = {}
+
+        tmpObj['airline_designator'] = self.airline_designator
+        tmpObj['flight_number'] = self.flight_number
+        tmpObj['ident'] = self.ident
+        tmpObj['origin'] = self.origin['icao_code']
+        tmpObj['destination'] = self.destination['icao_code']
+
+        self.hash = hashlib.md5(json.dumps(tmpObj).encode('utf-8')).hexdigest()
 
 class registration():
 
@@ -799,15 +1053,14 @@ class operator():
 
     def compute_hash(self):
 
-        objCompleted = {}
+        tmpObj = {}
 
-        objCompleted['airline_designator'] = self.airline_designator
-        objCompleted['name'] = self.name
-        objCompleted['callsign'] = self.callsign
-        objCompleted['country'] = self.country
-        objCompleted['source'] = self.source
-        self.hash = hashlib.md5(json.dumps(objCompleted).encode('utf-8')).hexdigest()
+        for key in self.__dict__:
+            if key in ['airline_designator', 'name', 'callsign', 'country', 'source']:
+                tmpObj[key] = self.__dict__[key]
 
+        self.hash = hashlib.md5(json.dumps(tmpObj).encode('utf-8')).hexdigest()
+    
 
     def post(self):
 
