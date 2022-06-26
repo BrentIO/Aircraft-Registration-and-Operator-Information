@@ -264,6 +264,17 @@ paths:
                   $ref: '#/components/examples/detailed_registration_US'
                 Detailed Registration, Canada:
                   $ref: '#/components/examples/detailed_registration_Canada'
+        303:
+          description: Redirection to detailed data
+          headers:
+            location:
+              description: URL that should be used for redirection
+              schema:
+                type: string
+            referer:
+              description: URL of the page that is referring this redirection
+              schema:
+                type: string
         400:
           description: Bad Request
           content:
@@ -286,8 +297,242 @@ paths:
               schema:
                 $ref: '#/components/schemas/error_message'
                 
-            
-
+  /registration/registration/{registration}/simple:
+    get:
+      tags:
+       - Aircraft and Registration Data
+      description: Retrieve an aicraft's registration and aircraft type information
+      summary: Retrieve an aicraft registration by registration, returning only simple results
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/aircraft_registration'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/simple_registration'
+              examples:
+                Simple Registration, United States:
+                  $ref: '#/components/examples/simple_registration_US'
+                Simple Registration, Canada:
+                  $ref: '#/components/examples/simple_registration_Canada'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/registration_invalid_request'
+        401:
+          description: Unauthorized        
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+                
+  /registration/registration/{registration}/detailed:
+    get:
+      tags:
+       - Aircraft and Registration Data
+      description: Retrieve an aicraft's registration and aircraft type information
+      summary: Retrieve an aicraft registration by registration, returning only detailed results
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/aircraft_registration'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/detailed_registration'
+              examples:
+                Detailed Registration, United States:
+                  $ref: '#/components/examples/detailed_registration_US'
+                Detailed Registration, Canada:
+                  $ref: '#/components/examples/detailed_registration_Canada'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/registration_invalid_request'
+        401:
+          description: Unauthorized        
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+             
+  /registration/icao_hex/{icao_hex}:
+    get:
+      tags:
+       - Aircraft and Registration Data
+      description: Retrieve an aicraft's registration and aircraft type information
+      summary: Retrieve an aicraft registration by ICAO hex.  Both simple and detailed will be checked, default simple.  If no result is found for simple, a redirect may be provided to check detailed
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/icao_hex'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/simple_registration'
+                  - $ref: '#/components/schemas/detailed_registration'
+              examples:
+                Simple Registration, United States:
+                  $ref: '#/components/examples/simple_registration_US'
+                Simple Registration, Canada:
+                  $ref: '#/components/examples/simple_registration_Canada'
+                Detailed Registration, United States:
+                  $ref: '#/components/examples/detailed_registration_US'
+                Detailed Registration, Canada:
+                  $ref: '#/components/examples/detailed_registration_Canada'
+        303:
+          description: Redirection to detailed data
+          headers:
+            location:
+              description: URL that should be used for redirection
+              schema:
+                type: string
+            referer:
+              description: URL of the page that is referring this redirection
+              schema:
+                type: string
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/registration_invalid_request'
+        401:
+          description: Unauthorized        
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+                
+  /registration/icao_hex/{icao_hex}/simple:
+    get:
+      tags:
+       - Aircraft and Registration Data
+      description: Retrieve an aicraft's registration and aircraft type information
+      summary: Retrieve an aicraft registration by ICAO hex, returning only simple results
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/icao_hex'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/simple_registration'
+              examples:
+                Simple Registration, United States:
+                  $ref: '#/components/examples/simple_registration_US'
+                Simple Registration, Canada:
+                  $ref: '#/components/examples/simple_registration_Canada'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/registration_invalid_request'
+        401:
+          description: Unauthorized        
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+                
+  /registration/icao_hex/{icao_hex}/detailed:
+    get:
+      tags:
+       - Aircraft and Registration Data
+      description: Retrieve an aicraft's registration and aircraft type information
+      summary: Retrieve an aicraft registration by ICAO hex.  Both simple and detailed will be checked, default simple.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/icao_hex'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/detailed_registration'
+              examples:
+                Detailed Registration, United States:
+                  $ref: '#/components/examples/detailed_registration_US'
+                Detailed Registration, Canada:
+                  $ref: '#/components/examples/detailed_registration_Canada'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/registration_invalid_request'
+        401:
+          description: Unauthorized        
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
 
 
 components:
@@ -592,3 +837,31 @@ components:
       schema:
         $ref: '#/components/schemas/icao_airline_designator'
 
+    icao_hex:
+      in: path
+      name: icao_hex
+      example: A8AE7F
+      required: true
+      schema:
+        $ref: '#/components/schemas/icao_hex'
+
+    aircraft_registration:
+      in: path
+      name: registration
+      description: Aircraft's registration, case insensitive
+      example: N659DL
+      required: true
+      schema:
+        $ref: '#/components/schemas/aircraft_registration'
+
+    referer:
+      in: header
+      name: referer
+      schema:
+        type: string
+
+    location:
+      in: header
+      name: location
+      schema:
+        type: string
