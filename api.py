@@ -200,7 +200,7 @@ def operator_get(requestHandler, urlPath):
 
     tmpOperator = operator()
 
-    tmpOperator.designator = parse.unquote(urlPath[1]).strip()
+    tmpOperator.airline_designator = parse.unquote(urlPath[1]).strip()
 
     getResult = tmpOperator.get()
 
@@ -228,8 +228,8 @@ def operator_post(requestHandler):
     body = parseBody(requestHandler)
 
     #Verify the object passed has the correct parameters
-    if "designator" not in body:
-        raise HTTPErrorResponse(status=400, message="Parameter 'designator' is required")
+    if "airline_designator" not in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is required")
 
     if "name" not in body:
         raise HTTPErrorResponse(status=400, message="Parameter 'name' is required")
@@ -245,7 +245,7 @@ def operator_post(requestHandler):
 
     tmpOperator = operator()
 
-    tmpOperator.designator = body['designator']
+    tmpOperator.airline_designator = body['airline_designator']
     tmpOperator.name = body['name']
     tmpOperator.callsign = body['callsign']
     tmpOperator.country = body['country']
@@ -281,8 +281,8 @@ def operator_patch(requestHandler, urlPath):
     body = parseBody(requestHandler)
 
     #Verify the object passed has the correct parameters
-    if "designator" in body:
-        raise HTTPErrorResponse(status=400, message="Parameter 'designator' is not allowed in request body for this operation")
+    if "airline_designator" in body:
+        raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is not allowed in request body for this operation")
 
     if "name" not in body:
         raise HTTPErrorResponse(status=400, message="Parameter 'name' is required")
@@ -731,8 +731,8 @@ class registration():
 
 class operator():
 
-    def __init__(self, designator = "", name = "", callsign = "", country="", source=""):
-        self.designator = str(designator).strip().upper()
+    def __init__(self, airline_designator = "", name = "", callsign = "", country="", source=""):
+        self.airline_designator = str(airline_designator).strip().upper()
         self.name = str(name).strip()
         self.callsign = str(callsign).strip().upper()
         self.country = str(country).strip().upper()
@@ -750,7 +750,7 @@ class operator():
 
         mysqlCur = operatorsDb.cursor(dictionary=True)
 
-        mysqlCur.execute("SELECT airline_designator, name, callsign, country, sources.agency AS source, hash FROM operators LEFT OUTER JOIN sources ON sources.unique_id = operators.source WHERE operators.airline_designator = '" + self.designator + "' AND operators.deleted is null;")
+        mysqlCur.execute("SELECT airline_designator, name, callsign, country, sources.agency AS source, hash FROM operators LEFT OUTER JOIN sources ON sources.unique_id = operators.source WHERE operators.airline_designator = '" + self.airline_designator + "' AND operators.deleted is null;")
 
         result = mysqlCur.fetchall()
 
@@ -759,7 +759,7 @@ class operator():
 
         #Ensure we have have exactly 1 row
         if len(result) == 1:
-            self.designator = result[0]['airline_designator']
+            self.airline_designator = result[0]['airline_designator']
             self.name = result[0]['name']
             self.callsign = result[0]['callsign']
             self.country = result[0]['country']
@@ -773,7 +773,7 @@ class operator():
 
         if len(result) > 1:
             #Default to an error
-            logger.warning("Retrieved " + str(len(result)) + " records from MySQL when querying for operator '" + self.designator + "'.  Expected 0 or 1.")
+            logger.warning("Retrieved " + str(len(result)) + " records from MySQL when querying for operator '" + self.airline_designator + "'.  Expected 0 or 1.")
 
         return ENUM_RESULT.FAILED
 
@@ -786,7 +786,7 @@ class operator():
 
         objCompleted = {}
 
-        objCompleted['airline_designator'] = self.designator
+        objCompleted['airline_designator'] = self.airline_designator
         objCompleted['name'] = self.name
         objCompleted['callsign'] = self.callsign
         objCompleted['country'] = self.country
@@ -803,8 +803,8 @@ class operator():
                 "message" : ""
             }
 
-            if self.designator.strip() == "":
-                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "designator is empty"}
+            if self.airline_designator.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "airline_designator is empty"}
 
             if self.name.strip() == "":
                 return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "name is empty"}
@@ -818,7 +818,7 @@ class operator():
             if self.source.strip() == "":
                 return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "source is empty"}
 
-            self.designator = self.designator.strip().upper()
+            self.airline_designator = self.airline_designator.strip().upper()
             self.name = self.name.strip()
             self.callsign = self.callsign.strip().upper()
             self.country = self.country.strip().upper()
@@ -841,11 +841,11 @@ class operator():
                                 ) LIMIT 1;")
 
             #Insert the data
-            mysqlCur.execute("UPDATE operators SET deleted = now() WHERE source = (SELECT sources.unique_id FROM sources WHERE sources.agency = '" + self.source + "') AND airline_designator = '" + self.designator + "' AND operators.deleted is NULL")
+            mysqlCur.execute("UPDATE operators SET deleted = now() WHERE source = (SELECT sources.unique_id FROM sources WHERE sources.agency = '" + self.source + "') AND airline_designator = '" + self.airline_designator + "' AND operators.deleted is NULL")
             
             #Insert the data
             mysqlCur.execute("INSERT INTO operators (airline_designator, name, callsign, country, hash, source) \
-                                (SELECT '" + self.designator + "','" + self.name + "','" + self.callsign + "','" + self.country + "','" + self.hash + "', sources.unique_id FROM sources \
+                                (SELECT '" + self.airline_designator + "','" + self.name + "','" + self.callsign + "','" + self.country + "','" + self.hash + "', sources.unique_id FROM sources \
                                 WHERE sources.agency = '" + self.source + "') ON DUPLICATE KEY UPDATE deleted = NULL;")
 
             if mysqlCur.rowcount > 0:
@@ -860,7 +860,7 @@ class operator():
             mysqlCur.close()
             operatorsDb.close()
 
-            logger.info("POST operator " + self.designator + " hash " + self.hash)
+            logger.info("POST operator " + self.airline_designator + " hash " + self.hash)
 
             return returnValue
 
@@ -878,8 +878,8 @@ class operator():
                 "message" : ""
             }
 
-            if self.designator.strip() == "":
-                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "designator is empty"}
+            if self.airline_designator.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "airline_designator is empty"}
 
             if self.name.strip() == "":
                 return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "name is empty"}
@@ -893,16 +893,16 @@ class operator():
             if self.source.strip() == "":
                 return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "source is empty"}
 
-            self.designator = self.designator.strip().upper()
+            self.airline_designator = self.airline_designator.strip().upper()
             self.name = self.name.strip()
             self.callsign = self.callsign.strip().upper()
             self.country = self.country.strip().upper()
             self.source = self.source.strip()
             self.compute_hash()
 
-            tmpCheckIfExists = operator(self.designator)
+            tmpCheckIfExists = operator(self.airline_designator)
 
-            #Make sure the designator already exists
+            #Make sure the airline_designator already exists
             if tmpCheckIfExists.get() != ENUM_RESULT.SUCCESS:
                 return {"status" : ENUM_RESULT.NOT_FOUND}
 
@@ -922,11 +922,11 @@ class operator():
                                 ) LIMIT 1;")
 
             #Insert the data
-            mysqlCur.execute("UPDATE operators SET deleted = now() WHERE source = (SELECT sources.unique_id FROM sources WHERE sources.agency = '" + self.source + "') AND airline_designator = '" + self.designator + "' AND hash <> '" + self.hash + "' AND operators.deleted is NULL")
+            mysqlCur.execute("UPDATE operators SET deleted = now() WHERE source = (SELECT sources.unique_id FROM sources WHERE sources.agency = '" + self.source + "') AND airline_designator = '" + self.airline_designator + "' AND hash <> '" + self.hash + "' AND operators.deleted is NULL")
             
             #Insert the data
             mysqlCur.execute("INSERT INTO operators (airline_designator, name, callsign, country, hash, source) \
-                                (SELECT '" + self.designator + "','" + self.name + "','" + self.callsign + "','" + self.country + "','" + self.hash + "', sources.unique_id FROM sources \
+                                (SELECT '" + self.airline_designator + "','" + self.name + "','" + self.callsign + "','" + self.country + "','" + self.hash + "', sources.unique_id FROM sources \
                                 WHERE sources.agency = '" + self.source + "') ON DUPLICATE KEY UPDATE deleted = NULL;")
 
             if mysqlCur.rowcount > 0 or mysqlCur.rowcount == 0:
@@ -938,7 +938,7 @@ class operator():
             mysqlCur.close()
             operatorsDb.close()
 
-            logger.info("PATCH operator " + self.designator + " hash " + self.hash)
+            logger.info("PATCH operator " + self.airline_designator + " hash " + self.hash)
 
             return returnValue
 
@@ -956,14 +956,14 @@ class operator():
                 "message" : ""
             }
 
-            if self.designator.strip() == "":
-                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "designator is empty"}
+            if self.airline_designator.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "airline_designator is empty"}
 
-            self.designator = self.designator.strip().upper()
+            self.airline_designator = self.airline_designator.strip().upper()
 
-            tmpCheckIfExists = operator(self.designator)
+            tmpCheckIfExists = operator(self.airline_designator)
 
-            #Make sure the designator already exists
+            #Make sure the airline_designator already exists
             if tmpCheckIfExists.get() != ENUM_RESULT.SUCCESS:
                 return {"status" : ENUM_RESULT.NOT_FOUND}
 
@@ -976,7 +976,7 @@ class operator():
             mysqlCur = operatorsDb.cursor()
 
             #Insert the data
-            mysqlCur.execute("UPDATE operators SET deleted = now() WHERE airline_designator = '" + self.designator + "' AND operators.deleted is NULL")
+            mysqlCur.execute("UPDATE operators SET deleted = now() WHERE airline_designator = '" + self.airline_designator + "' AND operators.deleted is NULL")
 
             if mysqlCur.rowcount == 1:
                 returnValue = {"status" : ENUM_RESULT.SUCCESS}
@@ -987,7 +987,7 @@ class operator():
             mysqlCur.close()
             operatorsDb.close()
 
-            logger.info("DELETE operator " + self.designator)
+            logger.info("DELETE operator " + self.airline_designator)
 
             return returnValue
 
