@@ -721,6 +721,7 @@ components:
       minLength: 3
       maxLength: 3
       description: ICAO airline designator
+      example: DAL
 
     operator_response:
       type: object
@@ -789,17 +790,13 @@ components:
       maxLength: 50
       type: string
       description: Originating data source
+      writeOnly: true
+      example: Mictronics-IndexedDB
 
-    hash:
-      minLength: 32
-      maxLength: 32
     icao_airport_code:
       maxLength: 4
       type: string
-      readOnly: true
-      description: Unique hash for the data contained in the record, used for easily identifying duplicates     
 
-  
     flight_number:
       maxLength: 10
       type: string
@@ -1096,7 +1093,6 @@ components:
       in: path
       name: airline_designator
       description: ICAO airline designator, case insensitive
-      example: DAL
       required: true
       schema:
         $ref: '#/components/schemas/icao_airline_designator'
