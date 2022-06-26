@@ -72,40 +72,183 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/error_message'
-              
-  /registration:
+  
+    post:
+      tags:
+       - Airline Operator Data
+      description: Create a new airline operator
+      summary: Create a new airline operator
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/new_operator_request'
+            examples:
+              Britsh Airways:
+                $ref: '#/components/examples/create_operator_BAW'
+      responses:
+        204:
+          description: OK
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/operator_invalid_request'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+
+  /operator/{airline_designator}:
     get:
       tags:
-       - Aircraft and Registration Data
-      description: Retrieve an aicraft's registration and aircraft type information.  Either icao_hex or registration are required.
-      summary: Retrieve an aicraft registration by ICAO Hex or Registration
+       - Airline Operator Data
+      description: Retrieve airline operator information by ICAO airline designator
+      summary: Retrieve airline operator information
       security:
         - ApiKeyAuth: []
       parameters:
-        - in: query
-          name: icao_hex
-          schema:
-            type: string
-            minLength: 6
-            maxLength: 6
-          description: ICAO hex of the aircraft to search, case insensitive
-          example: A8AE7F
-        - in: query
-          name: registration
-          schema:
-            type: string
-            minLength: 2
-          description: Registration of the aircraft to search, case insensitive
-          example: N659DL
-        - in: query
-          name: detailed
-          schema:
-            type: boolean
-            default: false
-          description: If specified, detailed information about the aircraft's registration is returned from a governmental source of authority
+        - $ref: '#/components/parameters/icao_airline_designator'
       responses:
         200:
-          description: "OK"
+          description: OK
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/operator_response'
+              examples:
+                British Airways:
+                  $ref: '#/components/examples/operator_BAW'
+                Delta Air Lines:
+                  $ref: '#/components/examples/operator_DAL'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/operator_invalid_request'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+
+    patch:
+      tags:
+       - Airline Operator Data
+      description: Update an existing airline operator information by ICAO airline designator
+      summary: Update airline operator information
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/icao_airline_designator'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/update_operator_request'
+            examples:
+              Delta Air Lines:
+                $ref: '#/components/examples/update_operator_DAL'
+      responses:
+        204:
+          description: OK
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/operator_invalid_request'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+
+    delete:
+      tags:
+       - Airline Operator Data
+      description: Delete an airline operator by ICAO airline designator
+      summary: Delete airline operator
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/icao_airline_designator'
+      responses:
+        204:
+          description: OK
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+              examples:
+                Bad Request:
+                  $ref: '#/components/examples/operator_invalid_request'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        409:
+          description: Unexpected Database Response
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_message'
+
+
+  /registration/registration/{registration}:
+    get:
+      tags:
+       - Aircraft and Registration Data
+      description: Retrieve an aicraft's registration and aircraft type information
+      summary: Retrieve an aicraft registration by registration.  Both simple and detailed will be checked, default simple.  If no result is found for simple, a redirect may be provided to check detailed
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/aircraft_registration'
+      responses:
+        200:
+          description: OK
           content:
             application/json:
               schema:
@@ -218,19 +361,80 @@ components:
         name:
           type: string
           description: Airline name
+          maxLength: 255
         callsign:
           type: string
           description: Radio callsign prepended to the flight number
+          maxLength: 45
         country:
+          maxLength: 45
           type: string
           description: Country of registration
+        source:
+          $ref: '#/components/schemas/source'
+        hash:
+          $ref: '#/components/schemas/hash'
+
+    new_operator_request:
+      type: object
+      properties:
+        airline_designator:
+          $ref: '#/components/schemas/icao_airline_designator'
+        name:
+          $ref: '#/components/schemas/operator_name'
+        callsign:
+          $ref: '#/components/schemas/callsign'          
+        country:
+          $ref: '#/components/schemas/operator_country'
+        source:
+          $ref: '#/components/schemas/source'
+
+    update_operator_request:
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/operator_name'
+        callsign:
+          $ref: '#/components/schemas/callsign'          
+        country:
+          $ref: '#/components/schemas/operator_country'
+        source:
+          $ref: '#/components/schemas/source'
+
+    operator_name:
+      type: string
+      description: Airline name
+      maxLength: 255
+
+    callsign:
+      type: string
+      description: Radio callsign prepended to the flight number
+      maxLength: 45
+
+    operator_country:
+      maxLength: 45
+      type: string
+      description: Country of registration
+
+    source:
+      maxLength: 50
+      type: string
+      description: Originating data source
+
+    hash:
+      minLength: 32
+      maxLength: 32
+      type: string
+      readOnly: true
+      description: Unique hash for the data contained in the record, used for easily identifying duplicates     
+
   
   examples:
 
     registration_invalid_request:
-      description: Neither the icao_hex nor registration was provided in the query, or BOTH were provided in the query
+      description: The registration parameter was empty
       value:
-        error: Either 'icao_hex' or 'registration' parameter is required.
+        error: Parameter 'registration' is required.
 
     operator_invalid_request:
       description: The airline_designator parameter was not provided
@@ -347,6 +551,8 @@ components:
         name: British Airways
         callsign: SPEEDBIRD
         country: United Kingdom
+        source: Mictronics-IndexedDB
+        hash: 26053d5ea8a1609ed4d25de2732eb63d
 
     operator_DAL:
       value:
@@ -354,4 +560,35 @@ components:
         name: Delta Air Lines
         callsign: DELTA
         country: United States
+        source: Mictronics-IndexedDB
+        hash: 4c78deb4ed8c275b31cc894f89251565
+
+    create_operator_BAW:
+      value:
+        airline_designator: BAW
+        name: British Airways
+        callsign: SPEEDBIRD
+        country: United Kingdom
+        source: Mictronics-IndexedDB
+
+    update_operator_DAL:
+      value:
+        name: Delta Air Lines
+        callsign: DELTA
+        country: United States
+        source: Mictronics-IndexedDB
+
+
+  parameters:
+
+  #description: If specified, detailed information about the aircraft's registration is returned from a governmental source of authority
+
+    icao_airline_designator:
+      in: path
+      name: airline_designator
+      description: ICAO airline designator, case insensitive
+      example: DAL
+      required: true
+      schema:
+        $ref: '#/components/schemas/icao_airline_designator'
 
