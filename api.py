@@ -354,6 +354,45 @@ def operator_delete(requestHandler, urlPath):
     raise HTTPErrorResponse()
 
 
+def flight_info_get(requestHandler, urlPath):
+
+    if len(urlPath) < 2 or len(urlPath[1]) == 0:
+        logger.debug("Parameter 'ident' is required" + str(urlPath))
+        raise HTTPErrorResponse(status=400, message="Parameter 'ident' is required")
+
+    #Parse the query string
+    queryString = parse.parse_qs(parse.urlsplit(requestHandler.path).query)
+    airport_icao = None
+
+    #Ensure we only have 1 instance of each hint
+    if "airport_icao" in queryString:
+        if len(queryString['airport_icao']) != 1:
+            raise HTTPErrorResponse(status=400, message="Exactly 1 airport_icao hint must be supplied")
+
+        airport_icao = queryString['airport_icao'][0]
+
+    tmpFlightInfo = flight_info(urlPath[1], focus_airport_icao_code=airport_icao)
+
+    getResult = tmpFlightInfo.get()
+    
+    #Ensure we have a result
+    if getResult == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 200, body=tmpFlightInfo.flight)
+        return
+
+    if getResult == ENUM_RESULT.NOT_FOUND:
+        responseHandler(requestHandler, 404)
+        return
+    
+    if getResult == ENUM_RESULT.UNEXPECTED_RESULT:
+        responseHandler(requestHandler, 409)
+        return
+
+    #Default
+    logger.debug("Unhandled response in flight_info_get for data" + str(urlPath))
+    raise HTTPErrorResponse()
+
+
 class sigKill(Exception):
     pass
 
@@ -490,6 +529,10 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
                 operator_get(self, urlPath)
                 return
 
+            if urlPath[0] == "flight":
+                flight_info_get(self, urlPath)
+                return              
+
             #All other requests get 404
             responseHandler(self, 404)
 
@@ -523,18 +566,89 @@ class HTTPUnauthorizedResponse(Exception):
         super().__init__(self.status)
 
 
-class flight():
+class flight_info():
 
-    def __init__(self):
+    def __init__(self, ident, focus_airport_icao_code = None):
         self.ident = ""
-        self.operator = operator()
-        self.origin = {}
-        self.destination = {}
-        self.source = ""
-        self.hash = ""
+        self.flight = {}
+        self.flight['origin'] = {}
+        self.flight['destination'] = {}
+        self.flight['source'] = ""
+        self.flight['hash'] = ""
+
+        self.focus_airport_icao_code = focus_airport_icao_code
+        self.ident = ident
 
     def get(self):
-        return
+
+        operatorsDb = mysql.connector.connect(
+            host=settings['mySQL']['uri'],
+            user=settings['mySQL']['username'],
+            password=settings['mySQL']['password'],
+            database=settings['mySQL']['database'])
+
+        mysqlCur = operatorsDb.cursor(dictionary=True)
+
+        sqlQuery = "SELECT "\
+                "origin_airport.icao_code AS origin_airport_icao_code, "\
+                "origin_airport.name AS origin_airport_name, "\
+                "origin_airport.city AS origin_airport_city, "\
+                "origin_airport.region AS origin_airport_region, "\
+                "origin_airport.country AS origin_airport_country, "\
+                "origin_airport.phonic AS origin_airport_phonic, "\
+                "destination_airport.icao_code AS destination_airport_icao_code, "\
+                "destination_airport.name AS destination_airport_name, "\
+                "destination_airport.city AS destination_airport_city, "\
+                "destination_airport.region AS destination_airport_region, "\
+                "destination_airport.country AS destination_airport_country, "\
+                "destination_airport.phonic AS destination_airport_phonic, "\
+                "flight_numbers.hash, "\
+                "sources.agency AS source "\
+            "FROM flight_numbers "\
+            "LEFT OUTER JOIN airports AS origin_airport ON origin_airport.icao_code = flight_numbers.origin "\
+            "LEFT OUTER JOIN airports AS destination_airport ON destination_airport.icao_code = flight_numbers.destination "\
+            "LEFT OUTER JOIN sources ON sources.unique_id = flight_numbers.source "\
+            "WHERE "\
+                "flight_numbers.expires >= now() AND "\
+                "flight_numbers.ident='" + self.ident + "'"
+
+        if self.focus_airport_icao_code is not None:
+            sqlQuery = sqlQuery + " AND (origin_airport.icao_code = '" + self.focus_airport_icao_code + "' OR destination_airport.icao_code = '" + self.focus_airport_icao_code + "')"
+
+        mysqlCur.execute(sqlQuery)
+
+        result = mysqlCur.fetchall()
+
+        mysqlCur.close()
+        operatorsDb.close()
+
+        #Ensure we have have exactly 1 row
+        if len(result) == 1:
+            self.flight['origin']['icao_code'] = result[0]['origin_airport_icao_code']
+            self.flight['origin']['name'] = result[0]['origin_airport_name']
+            self.flight['origin']['city'] = result[0]['origin_airport_city']
+            self.flight['origin']['region'] = result[0]['origin_airport_region']
+            self.flight['origin']['country'] = result[0]['origin_airport_country']
+            self.flight['origin']['phonic'] = result[0]['origin_airport_phonic']
+            self.flight['destination']['icao_code'] = result[0]['destination_airport_icao_code']
+            self.flight['destination']['name'] = result[0]['destination_airport_name']
+            self.flight['destination']['city'] = result[0]['destination_airport_city']
+            self.flight['destination']['region'] = result[0]['destination_airport_region']
+            self.flight['destination']['country'] = result[0]['destination_airport_country']
+            self.flight['destination']['phonic'] = result[0]['destination_airport_phonic']
+            self.flight['source'] = result[0]['source']
+            self.flight['hash'] = result[0]['hash']
+            return ENUM_RESULT.SUCCESS
+
+        if len(result) == 0:
+            return ENUM_RESULT.NOT_FOUND
+
+        if len(result) > 1:
+            logger.warning("Retrieved " + str(len(result)) + " records from MySQL when querying " + json.dumps(self.__dict__, default=str) + ".  Expected 0 or 1.")
+            return ENUM_RESULT.UNEXPECTED_RESULT
+            
+        #Return unknown failure
+        return {"status" : ENUM_RESULT.UNKNOWN_FAILURE}
 
     def post(self):
         return
