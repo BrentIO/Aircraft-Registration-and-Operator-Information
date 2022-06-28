@@ -1364,6 +1364,8 @@ def exitApp(exitCode=None):
 
     sys.exit(exitCode)
 
+class ThreadedTCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer):
+    pass
 
 def main():
 
@@ -1373,7 +1375,7 @@ def main():
         logger.info("Starting HTTP server on port " + str(settings['api']['port']))
 
         #Create the webserver
-        httpd = socketserver.TCPServer(("", settings['api']['port']), RequestHandler)
+        httpd = socketserver.ThreadingTCPServer(("", settings['api']['port']), RequestHandler)
 
         #Serve clients until stopped
         httpd.serve_forever()
