@@ -274,10 +274,9 @@ You can retrieve multiple airports by simply calling the script with different I
 
 `sudo crontab -e`
 
-Suggested: Retrieve the data twice per week, on at 11:00 Saturday and 18:00 Tuesday for Orlando International Airport (KMCO):
+Suggested: Retrieve the data every 3 days at 12:00 for Orlando International Airport (KMCO):
 ```
-0 11 * * 6 python3 /etc/P5Software/AROI/flightaware-airport-flight-arrivals.py KMCO
-0 18 * * 2 python3 /etc/P5Software/AROI/flightaware-airport-flight-arrivals.py KMCO
+0 12 */3 * * python3 /etc/P5Software/AROI/flightaware-airport-flight-arrivals.py KMCO
 ```
 
 Force the script to run now for Orlando International Airport (KMCO):
