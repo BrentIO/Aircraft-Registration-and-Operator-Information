@@ -409,6 +409,10 @@ class airport():
             self.phonic = "Melbourne"
             return
 
+        if self.icao_code == "KLGA":
+            self.phonic = self.phonic.replace("La Guardia", "LaGuardia")
+            return
+
         #Break the airport name into an array and check if the city is the last word.  If so, we want to move it to the first word (KCMH, KMSY, KIAH, KHVN, etc)
         if self.phonic.endswith(self.city):
             self.phonic = self.city + " " + self.name.replace(self.city, "").strip()
