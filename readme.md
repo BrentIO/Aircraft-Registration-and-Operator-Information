@@ -155,12 +155,12 @@ sudo systemctl daemon-reload
 
 Enable the service to run
 ```
-sudo systemctl enable AROI.service
+sudo systemctl enable AROI
 ```
 
 Start the service
 ```
-sudo systemctl start AROI.service
+sudo systemctl start AROI
 ```
 
 ## Import Agency Data
