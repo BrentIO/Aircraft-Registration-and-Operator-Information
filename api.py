@@ -168,15 +168,15 @@ def registration_get(requestHandler, urlPath):
             tmpHeader['key'] = "location"
             tmpHeader['value'] = "http://" + requestHandler.headers['Host'] + "/registration/" + str(urlPath[1]) + "/" +  str(urlPath[2])
 
-            if data_type == "simple":
-                tmpHeader['value'] = tmpHeader['value'] + "/detailed"
+            if data_type == "detailed":
+                tmpHeader['value'] = tmpHeader['value'] + "/simple"
                 tmpHeaders.append(tmpHeader)
 
                 responseHandler(requestHandler, 303, headers=tmpHeaders)
                 return
 
             else:
-                tmpHeader['value'] = tmpHeader['value'] + "/simple"
+                tmpHeader['value'] = tmpHeader['value'] + "/detailed"
                 tmpHeaders.append(tmpHeader)
 
                 responseHandler(requestHandler, 303, headers=tmpHeaders)
