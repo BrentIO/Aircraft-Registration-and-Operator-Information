@@ -764,7 +764,7 @@ def export_operators():
 
     logger.info("Committed " + str(mysqlCur.rowcount) + " rows of operator data to MySQL.")
 
-    #Delete operators that don't exist in the import
+    #Delete operators that don't exist in the import (Mictronics deleted the previously imported record from the database)
     logger.info("Deleting deregistered operators.")
 
     with yaspin(text="Deleting deregistered operators...") as spinner:
@@ -785,18 +785,20 @@ def export_operators():
 
     logger.info("Marked " + str(mysqlCur.rowcount) + " missing operators as deleted.")
 
-    #Delete operators if we have a new record coming in where the hashes don't match
+
+    #Mark any active operators as deleted if the hash does not match (Mictronics updated the database)
     logger.info("Deleting obsolete operators.")
 
     with yaspin(text="Deleting obsolete operators...") as spinner:
 
-        mysqlCur.execute("UPDATE operators, \
-                            (SELECT operators.unique_id FROM operators \
-                                INNER JOIN import_operators ON import_operators.airline_designator = operators.airline_designator and import_operators.hash <> operators.hash \
-                                INNER JOIN sources ON sources.unique_id = operators.source \
-                                WHERE operators.deleted IS NULL AND sources.agency = 'Mictronics-IndexedDB') AS d \
-                        SET operators.deleted = CURRENT_TIMESTAMP \
-                        WHERE operators.unique_id = d.unique_id ;")
+        mysqlCur.execute("UPDATE operators, ( \
+                            SELECT operators.unique_id FROM operators \
+                                    INNER JOIN import_operators ON import_operators.airline_designator = operators.airline_designator and import_operators.hash <> operators.hash \
+                                    INNER JOIN sources ON sources.unique_id = operators.source  \
+                                    WHERE operators.deleted IS NULL AND sources.agency = 'Mictronics-IndexedDB') \
+                                    AS d \
+                            SET operators.deleted = CURRENT_TIMESTAMP \
+                            WHERE operators.unique_id = d.unique_id ;")
 
         logger.info("Committing deletion of obsolete operators to MySQL.")
         registrationsDb.commit()
@@ -806,16 +808,41 @@ def export_operators():
 
     logger.info("Marked " + str(mysqlCur.rowcount) + " obsolete operators as deleted.")
 
+
+
+    #Mark any active operators as deleted if they exist in this import but did not originate from this import (Mictronics will replace the existing record)
+    logger.info("Deleting conflicting other source operators.")
+
+    with yaspin(text="Deleting conflicting other source operators...") as spinner:
+
+        mysqlCur.execute("UPDATE operators, ( \
+                            SELECT operators.unique_id FROM operators \
+                                    INNER JOIN import_operators ON import_operators.airline_designator = operators.airline_designator \
+                                    INNER JOIN sources ON sources.unique_id = operators.source \
+                                    WHERE operators.deleted IS NULL AND sources.agency <> 'Mictronics-IndexedDB') \
+                                    AS d \
+                            SET operators.deleted = CURRENT_TIMESTAMP \
+                            WHERE operators.unique_id = d.unique_id ;")
+
+        logger.info("Committing Deleting conflicting other source operators to MySQL.")
+        registrationsDb.commit()
+        
+        spinner.text = "Marked " + str(mysqlCur.rowcount) + " conflicting other source operators as deleted.\n"
+        spinner.ok("")
+
+    logger.info("Marked " + str(mysqlCur.rowcount) + " conflicting other source operators as deleted.")
+
+
     # Create new operators and mark deleted operators with a matching has as undeleted
     logger.info("Creating operators.")
 
     with yaspin(text="Creating new operators...") as spinner:
 
         mysqlCur.execute("INSERT INTO operators (airline_designator, name, callsign, country, hash, source) \
-                            (SELECT import_operators.airline_designator, import_operators.name, import_operators.callsign, import_operators.country, import_operators.hash, sources.unique_id FROM import_operators \
-                            LEFT OUTER JOIN operators on import_operators.airline_designator = operators.airline_designator \
-                            INNER JOIN sources on sources.unique_id = operators.source \
-                            WHERE sources.agency = 'Mictronics-IndexedDB') ON DUPLICATE KEY UPDATE deleted = NULL;")
+                            (SELECT import_operators.airline_designator, import_operators.name, import_operators.callsign, import_operators.country, import_operators.hash, \
+                                (SELECT unique_id FROM sources WHERE sources.agency = 'Mictronics-IndexedDB') as source \
+                                FROM import_operators \
+                            LEFT OUTER JOIN operators on import_operators.airline_designator = operators.airline_designator) ON DUPLICATE KEY UPDATE deleted = NULL;")
 
         logger.info("Committing new operators to MySQL.")
         registrationsDb.commit()
