@@ -422,7 +422,11 @@ class airport():
         if self.phonic.endswith("/") or self.phonic.endswith("-"):
             self.phonic = self.name
             self.removeInternationalAirport()
-    
+
+        self.phonic.replace("/", " ")
+        self.phonic.replace("-", " ")
+        self.phonic.replace("  ", " ")
+        self.phonic.replace("  ", " ")         
 
     def removeInternationalAirport(self):
         #Remove "International" and "Airport", and unnecessary spaces
