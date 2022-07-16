@@ -868,12 +868,6 @@ class flight_info():
 
             self.airline_designator = self.airline_designator.strip().upper()
 
-            tmpCheckIfExists = flight_info(self.ident)
-
-            #Make sure the airline_designator already exists
-            if tmpCheckIfExists.get() != ENUM_RESULT.SUCCESS:
-                return {"status" : ENUM_RESULT.NOT_FOUND}
-
             operatorsDb = mysql.connector.connect(
                 host=settings['mySQL']['uri'],
                 user=settings['mySQL']['username'],
@@ -885,7 +879,7 @@ class flight_info():
             #Insert the data
             mysqlCur.execute("UPDATE flight_numbers SET expires = now() WHERE ident = '" + self.ident + "' AND origin = '" + self.origin['icao_code'] + "' AND destination = '" + self.destination['icao_code'] + "' AND expires > now()")
 
-            if mysqlCur.rowcount == 1:
+            if mysqlCur.rowcount > 0:
                 returnValue = {"status" : ENUM_RESULT.SUCCESS}
             else:
                 returnValue = {"status" : ENUM_RESULT.NOT_FOUND, "message" : "Resource not found"}
@@ -894,7 +888,7 @@ class flight_info():
             mysqlCur.close()
             operatorsDb.close()
 
-            logger.info("DELETE flight " + self.ident)
+            logger.info("DELETE flight " + self.ident + " (" + str(mysqlCur.rowcount) + ")")
 
             return returnValue
 
