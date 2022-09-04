@@ -1099,6 +1099,7 @@ class flight_info():
 
         return returnValue
 
+
     def compute_hash(self):
 
         tmpObj = {}
@@ -1110,6 +1111,7 @@ class flight_info():
         tmpObj['destination'] = self.destination['icao_code']
 
         self.hash = hashlib.md5(json.dumps(tmpObj).encode('utf-8')).hexdigest()
+
 
 class registration():
 
@@ -1551,8 +1553,10 @@ def exitApp(exitCode=None):
 
     sys.exit(exitCode)
 
+
 class ThreadedTCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer):
     pass
+
 
 def main():
 
