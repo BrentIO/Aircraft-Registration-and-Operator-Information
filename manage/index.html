@@ -22,7 +22,6 @@
         $.ajax({
           type: 'GET',
           url: location.protocol + "//" + location.host + "/manage/common.html",
-          url: "./common.html",
 
           success: function(data) {
             document.getElementById('import').insertAdjacentHTML('beforeend', data);
