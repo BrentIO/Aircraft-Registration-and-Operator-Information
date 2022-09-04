@@ -43,12 +43,15 @@ def setLogLevel(logLevel):
         return
 
 
-def responseHandler(requestHandler, status, headers=[], body="", contentType="application/json"):
+def responseHandler(requestHandler, status, headers=[], body=None, contentType="application/json"):
 
     #Send the HTTP status code requested
     requestHandler.send_response(status)
 
-    if len(body) > 0:
+    if status == 404:
+        contentType = None
+
+    if contentType != None:
         tmpHeader = {}
         tmpHeader['key'] = "Content-Type"
         tmpHeader['value'] = contentType
@@ -70,8 +73,7 @@ def responseHandler(requestHandler, status, headers=[], body="", contentType="ap
     headers.clear()
 
     #Write the response body to the caller
-    if len(body) > 0:
-
+    if body:
         if contentType == "application/json":
             requestHandler.wfile.write(json.dumps(body).encode("utf8"))
         else:
