@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>AROI Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script> 
+    <script src="./common.js"></script> 
+
+    <script>
+
+      function contentLoaded(){
+        importCommonHTML();      
+      }
+
+      function importCommonHTML(){
+
+        $.ajax({
+          type: 'GET',
+          url: location.protocol + "//" + location.host + "/manage/common.html",
+          url: "./common.html",
+
+          success: function(data) {
+            document.getElementById('import').insertAdjacentHTML('beforeend', data);
+
+            //Continue Execute any page-specific content here
+            checkAPIKeyStored(); 
+
+          },
+          error: function(data){
+            document.body.style.height = '100vh';
+            document.body.innerHTML = "<div class=\"container d-flex align-items-center justify-content-center\" style=\"height:100%;\">\
+                                        <div class=\"bg-danger align-items-center justify-content-center\" style=\"padding:20px;\">\
+                                          <div class=\"text-center text-white\">\
+                                          <h2>Error</h2>Unable to load common.html.</div>\
+                                          </div>\
+                                        </div>"
+          }
+          });
+      }
+  </script>
+</head>
+
+<body>
+
+  <div id="import"></div>
+  
+    <!-- Main Content -->
+    <div class="container-fluid" style="margin-top:80px">
+        <h3>About</h3>
+        <p>From within AROI Manager, you can lookup and manage flight identifier information, operator information, and search registration details.  You must first log in using the API key for the AROI service.</p>
+    </div>
+  </body>
+</html>

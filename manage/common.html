@@ -1,0 +1,94 @@
+<!-- Navigation Bar -->
+  
+<nav class="navbar navbar-dark bg-dark navbar-expand-lg fixed-top">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContents" aria-controls="navbarContents" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarContents">
+        <ul class="navbar-collapse navbar-nav">
+          <li class="nav-item dropdown"><a class="nav-link dropdown-toggle" href="#"role="button" data-bs-toggle="dropdown" aria-expanded="false">Flight Identifiers</a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <li><a class="dropdown-item" href="/manage/flight/create.html">Create</a></li>
+              <li><a class="dropdown-item" href="/manage/flight/lookup.html">Lookup and Manage</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/manage/flight/conflicts.html">Conflicts</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown"><a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Operators</a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <li><a class="dropdown-item" href="/manage/operator/create.html">Create</a></li>
+              <li><a class="dropdown-item" href="/manage/operator/lookup.html">Lookup and Manage</a></li>
+            </ul>
+          </li>
+          <li><a class="nav-link" href="/manage/registration/lookup.html">Aircraft Registration</a></li>
+          <li class="nav-item">
+            <a class="nav-link" id="apiKeyLink" href="#" onclick="onclick_loginLogout();">Unknown API Key State</a>
+          </li>
+        </ul>
+      </div>
+      <a class="navbar-brand" href="/manage/">AROI Manager</a> 
+    </div>
+  </nav>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="apiKeyModal" tabindex="-1" aria-labelledby="apiKeyModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="apiKeyModalLabel">Login</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="api-key">
+              <input type="password" name="x-api-key" id="xapikey" class="form-control" placeholder="API Key"/>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="login();" id="apiKeyModalButtonSave">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expire Modal -->
+    <div class="modal fade" id="expireModal" tabindex="-1" aria-labelledby="expireModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="expireModalLabel">Confirm Expire</h5>
+          </div>
+          <div class="modal-body">
+            <p id="expireModalText"></p>
+          </div>          
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Expire" id="expireConfirmButton">Expire</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Toast Message -->
+    <div class="toast-container" style="position: absolute; top: 90px; right: 10px;">
+      <div class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true" id="toastSuccess">
+        <div class="d-flex">
+          <div class="toast-body">
+            <p id="toastSuccessText"></p>
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Failure Toast Message -->
+    <div class="toast-container" style="position: absolute; top: 90px; right: 10px;">
+      <div class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true" id="toastFailure">
+        <div class="d-flex">
+          <div class="toast-body">
+            <p id="toastFailureText"></p>
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    </div>
