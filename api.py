@@ -497,6 +497,30 @@ def flight_info_delete(requestHandler, urlPath):
     raise HTTPErrorResponse()
 
 
+def flight_info_conflicts_get(requestHandler):
+
+    tmpFlightInfo = flight_info(None)
+
+    getResult = tmpFlightInfo.get_conflicts()
+    
+    #Ensure we have a result
+    if getResult == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 200, body=tmpFlightInfo.conflicts())
+        return
+
+    if getResult == ENUM_RESULT.NOT_FOUND:
+        responseHandler(requestHandler, 404)
+        return
+    
+    if getResult == ENUM_RESULT.UNEXPECTED_RESULT:
+        responseHandler(requestHandler, 409)
+        return
+
+    #Default
+    logger.debug("Unhandled response in flight_info_conflicts_get")
+    raise HTTPErrorResponse()
+
+
 class sigKill(Exception):
     pass
 
@@ -642,9 +666,13 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
                 operator_get(self, urlPath)
                 return
 
-            if urlPath[0] == "flight":
+            if urlPath[0] == "flight" and urlPath[1] != "conflicts":
                 flight_info_get(self, urlPath)
-                return              
+                return
+
+            if urlPath[0] == "flight" and urlPath[1] == "conflicts":
+                flight_info_conflicts_get(self)
+                return
 
             #All other requests get 404
             responseHandler(self, 404)
@@ -693,6 +721,19 @@ class flight_info():
 
         self.focus_airport_icao_code = focus_airport_icao_code
         self.ident = ident
+        self._conflicts = []
+
+    class conflict():
+
+        def __init__(self):
+            self.ident = ""
+            self.airline_designator = ""
+            self.flight_number = ""
+            self.source = ""
+            self.expires = ""
+            self.origin = {}
+            self.destination = {}
+
 
     def get(self):
 
@@ -897,7 +938,90 @@ class flight_info():
         except Exception as ex:
             logger.error(ex)
             return {"status" : ENUM_RESULT.UNKNOWN_FAILURE, "message" : "Unknown failure, see log"}
+    
+    def conflicts(self):
+        return [ob.__dict__ for ob in self._conflicts]
 
+    def get_conflicts(self):
+
+        flightInfoDb = mysql.connector.connect(
+            host=settings['mySQL']['uri'],
+            user=settings['mySQL']['username'],
+            password=settings['mySQL']['password'],
+            database=settings['mySQL']['database'])
+
+        mysqlCur = flightInfoDb.cursor(dictionary=True)
+
+        sqlQuery = "SELECT flight_numbers.ident, " \
+                        "flight_numbers.airline_designator, "\
+                        "flight_numbers.flight_number, "\
+                        "flight_numbers.expires, "\
+                        "origin_airport.icao_code AS origin_airport_icao_code, "\
+                        "origin_airport.name AS origin_airport_name, "\
+                        "origin_airport.city AS origin_airport_city, "\
+                        "origin_airport.region AS origin_airport_region, "\
+                        "origin_airport.country AS origin_airport_country, "\
+                        "origin_airport.phonic AS origin_airport_phonic, "\
+                        "destination_airport.icao_code AS destination_airport_icao_code, "\
+                        "destination_airport.name AS destination_airport_name, "\
+                        "destination_airport.city AS destination_airport_city, "\
+                        "destination_airport.region AS destination_airport_region, "\
+                        "destination_airport.country AS destination_airport_country, "\
+                        "destination_airport.phonic AS destination_airport_phonic, "\
+                        "flight_numbers.hash, "\
+                        "sources.agency AS source "\
+                    "FROM flight_numbers " \
+                    "LEFT OUTER JOIN airports AS origin_airport ON origin_airport.icao_code = flight_numbers.origin " \
+                    "LEFT OUTER JOIN airports AS destination_airport ON destination_airport.icao_code = flight_numbers.destination " \
+                    "LEFT OUTER JOIN sources ON sources.unique_id = flight_numbers.source " \
+                    "WHERE flight_numbers.ident IN " \
+                            "(SELECT ident " \
+                                "FROM flight_numbers " \
+                                "WHERE expires > now() " \
+                                "GROUP BY ident " \
+                                "HAVING count(ident) > 1)  " \
+                        "AND flight_numbers.expires > now() " \
+                        "ORDER BY flight_numbers.ident, flight_numbers.expires;"
+
+        mysqlCur.execute(sqlQuery)
+
+        result = mysqlCur.fetchall()
+
+        mysqlCur.close()
+        flightInfoDb.close()
+
+        #Ensure we have have exactly 1 row
+        if len(result) > 0:
+
+            for entry in result:
+                tmpConflict = self.conflict()
+                tmpConflict.ident = entry['ident']
+                tmpConflict.airline_designator = entry['airline_designator']
+                tmpConflict.flight_number = entry['flight_number']
+                tmpConflict.expires = entry['expires'].isoformat()
+                tmpConflict.source = entry['source']
+                tmpConflict.origin['icao_code'] = entry['origin_airport_icao_code']
+                tmpConflict.origin['name'] = entry['origin_airport_name']
+                tmpConflict.origin['city'] = entry['origin_airport_city']
+                tmpConflict.origin['region'] = entry['origin_airport_region']
+                tmpConflict.origin['country'] = entry['origin_airport_country']
+                tmpConflict.origin['phonic'] = entry['origin_airport_phonic']
+                tmpConflict.destination['icao_code'] = entry['destination_airport_icao_code']
+                tmpConflict.destination['name'] = entry['destination_airport_name']
+                tmpConflict.destination['city'] = entry['destination_airport_city']
+                tmpConflict.destination['region'] = entry['destination_airport_region']
+                tmpConflict.destination['country'] = entry['destination_airport_country']
+                tmpConflict.destination['phonic'] = entry['destination_airport_phonic']
+                self._conflicts.append(tmpConflict)
+
+            return ENUM_RESULT.SUCCESS
+
+        if len(result) == 0:
+            return ENUM_RESULT.SUCCESS
+            
+        #Return unknown failure
+        return {"status" : ENUM_RESULT.UNKNOWN_FAILURE}
+    
     def toDict(self):
 
         returnValue = {}
