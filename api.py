@@ -652,9 +652,6 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
         try:
 
-            #Ensure the correct key was sent
-            authenticate(self)
-
             #Get the operation requested by the user
             urlPath = parseURL(self.path)
 
@@ -665,6 +662,9 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             if urlPath[0] == "favicon.ico":
                 self.sendStaticFile("manage/favicon.ico")
                 return
+
+            #Ensure the correct key was sent
+            authenticate(self)
 
             if urlPath[0] == "registration":
                 registration_get(self, urlPath)
