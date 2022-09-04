@@ -658,6 +658,14 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             #Get the operation requested by the user
             urlPath = parseURL(self.path)
 
+            if urlPath[0] == "manage":
+                self.handleStaticFile(urlPath)
+                return
+
+            if urlPath[0] == "favicon.ico":
+                self.sendStaticFile("manage/favicon.ico")
+                return
+
             if urlPath[0] == "registration":
                 registration_get(self, urlPath)
                 return
@@ -686,6 +694,65 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as ex:
             logger.error({"exception": ex})
             responseHandler(self, 500, body={"error": "Unknown Error"})
+
+
+    def sendStaticFile(self, fileName):
+
+        rootDirectory = os.path.dirname(os.path.realpath(__file__))
+        fileName = os.path.join(rootDirectory,fileName)
+
+        if os.path.exists(fileName) == False:
+            responseHandler(self, 404)
+            return
+
+        if os.path.isfile(fileName) == False:
+            if os.path.exists(os.path.join(fileName, "index.html")):
+                fileName = os.path.join(fileName, "index.html")
+            else:
+                responseHandler(self, 404)
+                return
+
+        data = None
+        contentType = None
+
+        with open(fileName, "rb") as f:
+            contentType = self.getContentType(fileName)
+            data = f.read()
+            f.close()
+
+            responseHandler(self, 200, body=data, contentType=contentType)
+
+
+    def handleStaticFile(self, fileName:list):
+
+        if "common.js" in fileName:
+            self.sendStaticFile("manage/common.js")
+            return
+
+        if "common.html" in fileName:
+            self.sendStaticFile("manage/common.html")
+            return
+    
+        strFileName = ""
+
+        for entry in fileName:
+            strFileName = os.path.join(strFileName, entry)
+
+        self.sendStaticFile(strFileName)
+
+
+    def getContentType(self, fileName:str):
+
+        if fileName.endswith(".html"):
+            return "text/html"
+
+        if fileName.endswith(".ico"):
+            return "image/x-icon"
+
+        if fileName.endswith(".js"):
+            return "text/javascript"
+          
+        return None
 
 
 class HTTPErrorResponse(Exception):
