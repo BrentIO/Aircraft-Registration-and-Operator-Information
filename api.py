@@ -1235,7 +1235,7 @@ class operator():
         returnValue = {}
 
         for key in self.__dict__:
-            if key in ['airline_designator', 'name', 'callsign', 'country']:
+            if key in ['airline_designator', 'name', 'callsign', 'country', 'source']:
                 returnValue[key] = self.__dict__[key]
         return returnValue
 
