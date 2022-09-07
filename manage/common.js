@@ -59,6 +59,27 @@ function formatErrorDisplay(data){
     displayErrorToast(displayMessage);
 }
 
+function setDisplayMessage(message){
+
+    switch(message){
+
+      case "no_records":
+
+        document.getElementById("displayMessage").style.visibility = "visible";
+        document.getElementById("displayMessage").innerHTML = "<p>There are no records to display.</p>"
+        break;
+
+      case "not_logged_in":
+
+        document.getElementById("displayMessage").style.visibility = "visible";
+        document.getElementById("displayMessage").innerHTML = "<p>You must be logged in to view this data.</p>"
+        break;
+
+      default:
+        document.getElementById("displayMessage").style.visibility = "hidden";
+    }
+  }
+
 function confirmExpireFlight(ident, origin, destination){
 
     document.getElementById("expireModalText").innerText = "Are you sure you want to expire " + ident + " from " + origin + " to " + destination +"?"

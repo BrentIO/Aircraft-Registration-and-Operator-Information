@@ -27,9 +27,11 @@
             document.getElementById('import').insertAdjacentHTML('beforeend', data);
 
             //Continue Execute any page-specific content here
-            if(checkAPIKeyStored() == true){            
+            if(checkAPIKeyStored() == true){         
               getConflicts();
-            }   
+            }else{
+              setDisplayMessage("not_logged_in");
+            }
 
           },
           error: function(data){
@@ -47,7 +49,8 @@
       function expireFlightSuccess(){
         getConflicts();
       }
-   
+
+      
       function getConflicts(){
 
         $.ajax({
@@ -61,7 +64,7 @@
             success: function(data) {
 
               if(data.length == 0){
-                document.getElementById("noRecords").style.visibility = "visible";
+                setDisplayMessage("no_records");
                 $("#conflictTableBody").html("");
                 return;
               }
@@ -96,6 +99,7 @@
                 tbl_body += "</tr>"
               });
               $("#conflictTableBody").html(tbl_body);
+              setDisplayMessage(None);
             },
             error: function(data){
               formatErrorDisplay(data)
@@ -127,7 +131,7 @@
         <tbody id="conflictTableBody">
         </tbody>
       </table>
-      <div style="visibility: hidden;font-size: 75%;" id="noRecords"><p>There are no records to display.</p></div>
+      <div style="visibility: hidden;font-size: 75%;" id="displayMessage"></div>
     </div>
   </body>
 </html>
