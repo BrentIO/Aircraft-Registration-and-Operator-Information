@@ -38,6 +38,11 @@ function displayErrorToast(message){
     $("#toastFailure").toast("show");
 }
 
+function displayWarningToast(message){
+    document.getElementById("toastWarningText").innerText = message.trim()
+    $("#toastWarning").toast("show");
+}
+
 function displaySuccessToast(message){
     document.getElementById("toastSuccessText").innerText = message.trim()
     $("#toastSuccess").toast("show");
