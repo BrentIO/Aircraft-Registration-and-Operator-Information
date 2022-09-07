@@ -51,7 +51,7 @@ def responseHandler(requestHandler, status, headers=[], body=None, contentType="
     if status == 404:
         contentType = None
 
-    if contentType != None:
+    if contentType != None and body != None:
         tmpHeader = {}
         tmpHeader['key'] = "Content-Type"
         tmpHeader['value'] = contentType
