@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>AROI Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script> 
+    <script src="/manage/common.js"></script> 
+
+    <script>
+
+      function contentLoaded(){
+        importCommonHTML();  
+      }
+
+      function importCommonHTML(){
+
+        $.ajax({
+          type: 'GET',
+          url: location.protocol + "//" + location.host + "/manage/common.html",
+
+          success: function(data) {
+            document.getElementById('import').insertAdjacentHTML('beforeend', data);
+
+            //Continue Execute any page-specific content here
+            checkAPIKeyStored(); 
+
+          },
+          error: function(data){
+            document.body.style.height = '100vh';
+            document.body.innerHTML = "<div class=\"container d-flex align-items-center justify-content-center\" style=\"height:100%;\">\
+                                        <div class=\"bg-danger align-items-center justify-content-center\" style=\"padding:20px;\">\
+                                          <div class=\"text-center text-white\">\
+                                          <h2>Error</h2>Unable to load common.html.</div>\
+                                          </div>\
+                                        </div>"
+          }
+          });
+      }
+
+
+      function clearInputs(){
+        document.getElementById('airline_designator').value = "";
+        document.getElementById('name').value = "";
+        document.getElementById('callsign').value = "";
+        document.getElementById('country').value = "";
+        document.getElementById('source').value = "Self";
+      }
+
+
+      function createOperator(){
+
+        var payload = {}
+
+        payload['airline_designator'] = document.getElementById('airline_designator').value.toUpperCase();
+        payload['name'] = document.getElementById('name').value;
+        payload['callsign'] = document.getElementById('callsign').value.toUpperCase();
+        payload['country'] = document.getElementById('country').value;
+        payload['source'] = document.getElementById('source').value;
+
+        $.ajax({
+
+          beforeSend: function(request) {
+              request.setRequestHeader("x-api-key", localStorage['x-api-key']);
+          },
+          
+          type: 'POST',
+          contentType: 'application/json',
+          url: location.protocol + "//" + location.host + "/operator",
+          data: JSON.stringify(payload),
+
+          success: function(data) {
+            displaySuccessToast("Created " + payload['name'] + " (" + payload['airline_designator'] + ") as " + payload['callsign'] +".");
+            clearInputs();
+          },
+          error: function(data){
+            formatErrorDisplay(data)
+          }
+        });
+      }
+
+  </script>
+</head>
+
+<body>
+
+  <div id="import"></div>
+  
+  <!-- Main Content -->
+  <div class="container-fluid" style="margin-top:80px">
+    <h3>Create Operator</h3>
+    <p class="fst-italic">Creates a new airline operator.</p>
+    <div class="col-lg-4">
+      <div class="input-group mb-3">
+        <span class="input-group-text">Airline Designator</span>
+        <input class="form-control" type="text" placeholder="(ex: BAW)" aria-label="airline designator" id="airline_designator">
+      </div>
+      <div class="input-group mb-3">
+        <span class="input-group-text">Name</span>
+        <input class="form-control" type="text" placeholder="(ex: British Airways)" aria-label="operator name" id="name">
+      </div>
+      <div class="input-group mb-3">
+        <span class="input-group-text">Callsign</span>
+        <input class="form-control" type="text" placeholder="(ex: Speedbird)" aria-label="operator callsign" id="callsign">
+      </div>
+      <div class="input-group mb-3">
+        <span class="input-group-text">Country</span>
+        <input class="form-control" type="text" placeholder="(ex: United Kingdom)" aria-label="country" id="country">
+      </div>
+      <div class="input-group mb-3">
+        <span class="input-group-text">Source</span>
+        <input class="form-control" type="text" aria-label="source" id="source" value="Self">
+      </div>
+      <button class="btn btn-primary mb-3" type="button" id="button-create" onclick="createOperator();">Create</button>
+    </div>
+  </div>
+
+</body>
+</html>

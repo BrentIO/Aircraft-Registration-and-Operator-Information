@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>AROI Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script> 
+    <script src="/manage/common.js"></script>  
+
+    <script>
+
+      function contentLoaded(){
+        importCommonHTML();      
+      }
+
+      function importCommonHTML(){
+
+        $.ajax({
+          type: 'GET',
+          url: location.protocol + "//" + location.host + "/manage/common.html",
+
+          success: function(data) {
+            document.getElementById('import').insertAdjacentHTML('beforeend', data);
+
+            //Continue Execute any page-specific content here
+            checkAPIKeyStored(); 
+
+          },
+          error: function(data){
+            document.body.style.height = '100vh';
+            document.body.innerHTML = "<div class=\"container d-flex align-items-center justify-content-center\" style=\"height:100%;\">\
+                                        <div class=\"bg-danger align-items-center justify-content-center\" style=\"padding:20px;\">\
+                                          <div class=\"text-center text-white\">\
+                                          <h2>Error</h2>Unable to load common.html.</div>\
+                                          </div>\
+                                        </div>"
+          }
+        });
+      }
+
+      function getFlight(){
+
+        var ident = document.getElementById("identSearch").value.toUpperCase().trim();
+
+        $.ajax({
+
+          beforeSend: function(request) {
+              request.setRequestHeader("x-api-key", localStorage['x-api-key']);
+          },
+
+          type: 'GET',
+          url: location.protocol + "//" + location.host + "/flight/" + ident,
+
+          success: function(data) {
+
+            //Attempt to get the airline data
+            getOperator(data['airline_designator']);
+
+            var originResult = "<div class=\"card\" style=\"width: 24rem;\">\
+                                  <div class=\"bg-success bg-gradient text-white text-center align-middle fs-4\">Origin</div>\
+                                  <div class=\"card-body\">\
+                                    <h5 class=\"card-title\">" + data['origin']['phonic'] + " (" + data['origin']['icao_code'] + ")</h5>\
+                                    <div class=\"card-text\">\
+                                      <p><span class=\"fw-bold\">Name</span><span class=\"ms-1\">" + data['origin']['name'] + "</span>\
+                                        <br>\
+                                      <span class=\"fw-bold\">City</span><span class=\"ms-1\">" + data['origin']['city'] + "</span>\
+                                        <br>\
+                                      <span class=\"fw-bold\">Region</span><span class=\"ms-1\">" + data['origin']['region'] + "</span></p>\
+                                    </div>\
+                                  </div>\
+                                </div>"
+
+            var destinationResult = "<div class=\"card\" style=\"width: 24rem;\">\
+                                      <div class=\"bg-danger bg-gradient text-white text-center align-middle fs-4\">Destination</div>\
+                                      <div class=\"card-body\">\
+                                    <h5 class=\"card-title\">" + data['destination']['phonic'] + " (" + data['destination']['icao_code'] + ")</h5>\
+                                    <div class=\"card-text\">\
+                                      <p><span class=\"fw-bold\">Name</span><span class=\"ms-1\">" + data['destination']['name'] + "</span>\
+                                        <br>\
+                                      <span class=\"fw-bold\">City</span><span class=\"ms-1\">" + data['destination']['city'] + "</span>\
+                                        <br>\
+                                      <span class=\"fw-bold\">Region</span><span class=\"ms-1\">" + data['destination']['region'] + "</span></p>\
+                                    </div>\
+                                  </div>\
+                                    </div>"
+
+            var expireButtonHTML = "<button type=\"button\" class=\"btn btn-danger\" onClick=\"confirmExpireFlight('" + ident + "','" + data['origin']['icao_code'] + "','" + data['destination']['icao_code'] + "');\">Expire Flight</button>"
+            
+            //Paint the UI
+            $("#originResult").html(originResult);
+            $("#destinationResult").html(destinationResult);
+            $("#expireButton").html(expireButtonHTML);
+           
+          },
+          error: function(data){
+            
+            clearResults();
+
+            if(data['status'] == 404){
+              displayErrorToast("No active flights identified as " + ident + ".")
+              return;
+            }
+
+            if(data['status'] == 409){
+              displayWarningToast("More than one flight is identified as " + ident + ".\n\nSee Flight Identifier Conflicts.")
+              return;
+            }
+
+            formatErrorDisplay(data)
+          }
+        });
+      }
+
+      function getOperator(airline_designator){
+
+        $.ajax({
+
+          beforeSend: function(request) {
+              request.setRequestHeader("x-api-key", localStorage['x-api-key']);
+          },
+          
+          type: 'GET',
+          url: location.protocol + "//" + location.host + "/operator/" + airline_designator,
+
+          success: function(data) {
+
+            var operatorResult = "<div class=\"card\" style=\"width: 24rem;\">\
+                                    <div class=\"bg-dark bg-gradient text-white text-center align-middle fs-4\">Operator</div>\
+                                    <div class=\"card-body\">\
+                                      <h5 class=\"card-title\">" + data['name'] + "</h5>\
+                                      <div class=\"card-text\">\
+                                        <p><span class=\"fw-bold\">Designator</span><span class=\"ms-1\">" + data['airline_designator'] + "</span>\
+                                          <br>\
+                                        <span class=\"fw-bold\">Callsign</span><span class=\"ms-1\">" + data['callsign'] + "</span>\
+                                          <br>\
+                                        <span class=\"fw-bold\">Country</span><span class=\"ms-1\">" + data['country'] + "</span></p>\
+                                      </div>\
+                                    </div>\
+                                  </div>"
+
+            $("#operatorResult").html(operatorResult);
+          }
+        });
+      }
+
+      function expireFlightSuccess(){
+        clearResults();
+      }
+
+      function clearResults(){
+        document.getElementById("operatorResult").innerHTML = "";
+        document.getElementById("originResult").innerHTML = "";
+        document.getElementById("destinationResult").innerHTML = "";
+        document.getElementById("expireButton").innerHTML = "";
+      }
+        
+  </script>
+</head>
+
+  <body>
+
+    <div id="import"></div>
+    
+    <!-- Main Content -->
+    <div class="container-fluid" style="margin-top:80px">
+      <h3>Flight Identifier Search</h3>
+      <p class="fst-italic">Searches for a flight identifier.</p>
+      <div class="col-lg-4">
+        <div class="input-group">
+            <span class="input-group-text">Flight Identifier</span>
+            <input class="form-control" type="text" placeholder="(ex: BAW2167)" aria-label="flight ident search" id="identSearch">
+            <button class="btn btn-outline-primary" type="button" id="button-search" onclick="getFlight();">Search</button>
+        </div>
+      </div>
+
+      <div class="justify-content-center flex-nowrap py-4">
+        <div class="row">
+          <div class="col justify-content-center" id="operatorResult"></div>
+          <div class="col justify-content-center" id="originResult"></div>
+          <div class="col justify-content-center" id="destinationResult"></div>
+        </div>
+        <div class="row py-4">
+          <div class="col">
+            <div id="expireButton"></div>
+          </div>
+        </div>
+    </div>
+  </body>
+</html>
