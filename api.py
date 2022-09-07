@@ -1188,7 +1188,7 @@ class operator():
         self.airline_designator = str(airline_designator).strip().upper()
         self.name = str(name).strip()
         self.callsign = str(callsign).strip().upper()
-        self.country = str(country).strip().upper()
+        self.country = str(country).strip()
         self.source = str(source).strip()
         self.hash = ""
 
@@ -1278,7 +1278,7 @@ class operator():
             self.airline_designator = self.airline_designator.strip().upper()
             self.name = self.name.strip()
             self.callsign = self.callsign.strip().upper()
-            self.country = self.country.strip().upper()
+            self.country = self.country.strip()
             self.source = self.source.strip()
             self.compute_hash()
 
@@ -1353,7 +1353,7 @@ class operator():
             self.airline_designator = self.airline_designator.strip().upper()
             self.name = self.name.strip()
             self.callsign = self.callsign.strip().upper()
-            self.country = self.country.strip().upper()
+            self.country = self.country.strip()
             self.source = self.source.strip()
             self.compute_hash()
 
