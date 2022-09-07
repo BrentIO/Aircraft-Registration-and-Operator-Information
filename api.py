@@ -73,7 +73,7 @@ def responseHandler(requestHandler, status, headers=[], body=None, contentType="
     headers.clear()
 
     #Write the response body to the caller
-    if body:
+    if body is not None:
         if contentType == "application/json":
             requestHandler.wfile.write(json.dumps(body).encode("utf8"))
         else:
