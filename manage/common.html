@@ -69,6 +69,24 @@
       </div>
     </div>
 
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+          </div>
+          <div class="modal-body">
+            <p id="deleteModalText"></p>
+          </div>          
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" aria-label="Delete" id="deleteConfirmButton">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Success Toast Message -->
     <div class="toast-container" style="position: absolute; top: 90px; right: 10px;">
       <div class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true" id="toastSuccess">
