@@ -58,3 +58,39 @@ function formatErrorDisplay(data){
     }
     displayErrorToast(displayMessage);
 }
+
+function confirmExpireFlight(ident, origin, destination){
+
+    document.getElementById("expireModalText").innerText = "Are you sure you want to expire " + ident + " from " + origin + " to " + destination +"?"
+    document.getElementById("expireConfirmButton").onclick = function(){
+      expireFlight(ident, origin, destination);
+    }
+    $("#expireModal").modal("show");
+}
+
+function expireFlight(ident, origin, destination){
+
+    if(checkAPIKeyStored() == false){
+        displayErrorToast("You must log in before performing this action.")
+        return;
+    }
+
+    $.ajax({
+
+        beforeSend: function(request) {
+            request.setRequestHeader("x-api-key", localStorage['x-api-key']);
+        },
+        type: 'DELETE',
+        url: location.protocol + "//" + location.host + "/flight/" + ident + "/" + origin + "/" + destination,
+
+        success: function(data) {
+        displaySuccessToast("Successfully expired " + ident + " from " + origin + " to " + destination +".")
+        expireFlightSuccess();
+
+        },
+
+        error: function(data){
+            formatErrorDisplay(data)
+        }
+    });
+}

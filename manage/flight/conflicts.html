@@ -43,42 +43,11 @@
           }
           });
       }
+
+      function expireFlightSuccess(){
+        getConflicts();
+      }
    
-      function confirmExpire(ident, origin, destination){
-
-        document.getElementById("expireModalText").innerText = "Are you sure you want to expire " + ident + " from " + origin + " to " + destination +"?"
-        document.getElementById("expireConfirmButton").onclick = function(){
-          expire(ident, origin, destination);
-        }
-        $("#expireModal").modal("show");
-      }
-
-      function expire(ident, origin, destination){
-
-        if(checkAPIKeyStored() == false){
-          displayErrorToast("You must log in before performing this action.")
-          return;
-        }
-
-        $.ajax({
-
-          beforeSend: function(request) {
-              request.setRequestHeader("x-api-key", localStorage['x-api-key']);
-          },
-          type: 'DELETE',
-          url: location.protocol + "//" + location.host + "/flight/" + ident + "/" + origin + "/" + destination,
-
-          success: function(data) {
-            displaySuccessToast("Successfully expired " + ident + " from " + origin + " to " + destination +".")
-            getConflicts();
-          },
-
-          error: function(data){
-              formatErrorDisplay(data)
-          }
-        });
-      }
-
       function getConflicts(){
 
         $.ajax({
@@ -123,7 +92,7 @@
                 tbl_body += "<td>" + this['destination']['icao_code'] + "</td>"
                 tbl_body += "<td>" + this['expires'] + "</td>"
                 tbl_body += "<td><span class=\"badge bg-dark\">" + this['source'] + "</span></td>"
-                tbl_body += "<td><button type=\"button\" class=\"btn btn-danger\" onClick=\"confirmExpire('" + this['ident'] + "','" + this['origin']['icao_code'] + "','" + this['destination']['icao_code'] + "');\">Expire</button></td>"
+                tbl_body += "<td><button type=\"button\" class=\"btn btn-danger\" onClick=\"confirmExpireFlight('" + this['ident'] + "','" + this['origin']['icao_code'] + "','" + this['destination']['icao_code'] + "');\">Expire</button></td>"
                 tbl_body += "</tr>"
               });
               $("#conflictTableBody").html(tbl_body);
