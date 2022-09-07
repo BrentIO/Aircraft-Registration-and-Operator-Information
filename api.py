@@ -356,6 +356,59 @@ def operator_delete(requestHandler, urlPath):
     raise HTTPErrorResponse()
 
 
+def operator_unknown_get(requestHandler, urlPath):
+
+    tmpUnknown = operator_unknown()
+
+    getResult = tmpUnknown.get()
+
+    #Ensure we have a result
+    if getResult == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 200, body=tmpUnknown.operators())
+        return
+
+    if getResult == ENUM_RESULT.NOT_FOUND:
+        responseHandler(requestHandler, 404)
+        return
+    
+    if getResult == ENUM_RESULT.UNEXPECTED_RESULT:
+        responseHandler(requestHandler, 409)
+        return
+
+    #Default
+    logger.debug("Unhandled response in operator_unknown_get for data" + str(urlPath))
+    raise HTTPErrorResponse()
+
+
+def operator_unknown_delete(requestHandler, urlPath):
+
+    if len(urlPath) < 2 or len(urlPath[1]) == 0:
+        logger.debug("Parameter 'airline_designator' is required" + str(urlPath))
+        raise HTTPErrorResponse(status=400, message="Parameter 'airline_designator' is required")
+
+    tmpUnknown = operator_unknown()
+    tmpUnknown.airline_designator = urlPath[1]
+
+    operator_deleteResponse = tmpUnknown.delete()
+
+    if operator_deleteResponse['status'] == ENUM_RESULT.SUCCESS:
+        responseHandler(requestHandler, 204)
+        return
+
+    if operator_deleteResponse['status'] == ENUM_RESULT.UNEXPECTED_RESULT:
+        raise HTTPErrorResponse(status=400, message=operator_deleteResponse['message'])
+
+    if operator_deleteResponse['status'] == ENUM_RESULT.NOT_FOUND:
+        responseHandler(requestHandler, 404)
+        return
+
+    if operator_deleteResponse['status'] == ENUM_RESULT.SUCCESS_NOT_MODIFIED:
+        raise HTTPErrorResponse(status=409, message=operator_deleteResponse['message'])
+
+    if operator_deleteResponse['status'] == ENUM_RESULT.UNKNOWN_FAILURE:
+        raise HTTPErrorResponse(status=500, message=operator_deleteResponse['message'])
+
+
 def flight_info_get(requestHandler, urlPath):
 
     if len(urlPath) < 2 or len(urlPath[1]) == 0:
@@ -581,6 +634,10 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             if urlPath[0] == "flight":
                 flight_info_delete(self, urlPath)
                 return
+
+            if urlPath[0] == "operators_unknown":
+                operator_unknown_delete(self, urlPath)
+                return                
                          
             #All other requests get 405
             responseHandler(self, 405)
@@ -672,6 +729,10 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
             if urlPath[0] == "operator":
                 operator_get(self, urlPath)
+                return
+
+            if urlPath[0] == "operators_unknown":
+                operator_unknown_get(self, urlPath)
                 return
 
             if urlPath[0] == "flight" and urlPath[1] != "conflicts":
@@ -1057,7 +1118,6 @@ class flight_info():
         mysqlCur.close()
         flightInfoDb.close()
 
-        #Ensure we have have exactly 1 row
         if len(result) > 0:
 
             for entry in result:
@@ -1182,6 +1242,98 @@ class registration():
         return {"status" : ENUM_RESULT.UNKNOWN_FAILURE}
 
 
+class operator_unknown():
+
+    def __init__(self):
+        self.airline_designator = ""
+        self._operators = []
+
+    class operator():
+
+        def __init__(self, airline_designator, count):
+            self.airline_designator = str(airline_designator).strip().upper()
+            self.count = count
+
+    def operators(self):
+        return [ob.__dict__ for ob in self._operators]
+
+    def get(self):
+
+        operatorsDb = mysql.connector.connect(
+            host=settings['mySQL']['uri'],
+            user=settings['mySQL']['username'],
+            password=settings['mySQL']['password'],
+            database=settings['mySQL']['database'])
+
+        mysqlCur = operatorsDb.cursor(dictionary=True)
+
+        sqlQuery = "SELECT airline_designator, count FROM operators_unknown WHERE deleted IS NULL ORDER BY count DESC, airline_designator;"
+
+        mysqlCur.execute(sqlQuery)
+
+        result = mysqlCur.fetchall()
+
+        mysqlCur.close()
+        operatorsDb.close()
+
+        if len(result) > 0:
+
+            for entry in result:
+                tmpUnknown = self.operator(airline_designator = entry['airline_designator'], count=entry['count'])
+                self._operators.append(tmpUnknown)
+
+            return ENUM_RESULT.SUCCESS
+
+        if len(result) == 0:
+            return ENUM_RESULT.SUCCESS
+            
+        #Return unknown failure
+        return {"status" : ENUM_RESULT.UNKNOWN_FAILURE}
+
+
+    def delete(self):
+        try:
+
+            returnValue = { 
+                "status" : ENUM_RESULT.UNKNOWN_FAILURE,
+                "message" : ""
+            }
+
+            if self.airline_designator.strip() == "":
+                return {"status" : ENUM_RESULT.INVALID_REQUEST, "message" : "airline_designator is empty"}
+
+            self.airline_designator = self.airline_designator.strip().upper()
+
+            operatorsDb = mysql.connector.connect(
+                host=settings['mySQL']['uri'],
+                user=settings['mySQL']['username'],
+                password=settings['mySQL']['password'],
+                database=settings['mySQL']['database'])
+
+            mysqlCur = operatorsDb.cursor()
+
+            #Insert the data
+            mysqlCur.execute("UPDATE operators_unknown SET deleted = now() WHERE airline_designator = '" + self.airline_designator + "' AND operators_unknown.deleted is NULL")
+
+            if mysqlCur.rowcount == 1:
+                returnValue = {"status" : ENUM_RESULT.SUCCESS}
+            else:
+                returnValue = {"status" : ENUM_RESULT.NOT_FOUND, "message" : "Resource not found"}
+                
+            operatorsDb.commit()
+            mysqlCur.close()
+            operatorsDb.close()
+
+            logger.info("DELETE unknown operator " + self.airline_designator)
+
+            return returnValue
+
+        except Exception as ex:
+            logger.error(ex)
+            return {"status" : ENUM_RESULT.UNKNOWN_FAILURE, "message" : "Unknown failure, see log"}
+
+
+
 class operator():
 
     def __init__(self, airline_designator = "", name = "", callsign = "", country="", source=""):
@@ -1207,9 +1359,6 @@ class operator():
 
         result = mysqlCur.fetchall()
 
-        mysqlCur.close()
-        operatorsDb.close()
-
         #Ensure we have have exactly 1 row
         if len(result) == 1:
             self.airline_designator = result[0]['airline_designator']
@@ -1219,17 +1368,31 @@ class operator():
             self.source = result[0]['source']
             self.hash = result[0]['hash']
 
+            mysqlCur.close()
+            operatorsDb.close()
+
             return ENUM_RESULT.SUCCESS
 
         if len(result) == 0:
+            mysqlCur.execute("INSERT INTO operators_unknown (airline_designator) VALUES ('" + self.airline_designator.upper() + "') \
+                                ON DUPLICATE KEY UPDATE deleted = NULL, count = count + 1;")          
+
+            operatorsDb.commit()
+            mysqlCur.close()
+            operatorsDb.close()
+
+            logger.debug("Added or updated " + self.airline_designator.upper() + " to the unknown operators table.")
+
             return ENUM_RESULT.NOT_FOUND
 
         if len(result) > 1:
             #Default to an error
             logger.warning("Retrieved " + str(len(result)) + " records from MySQL when querying for operator '" + self.airline_designator + "'.  Expected 0 or 1.")
 
-        return ENUM_RESULT.FAILED
+        mysqlCur.close()
+        operatorsDb.close()
 
+        return ENUM_RESULT.FAILED
 
     def toDict(self):
         returnValue = {}

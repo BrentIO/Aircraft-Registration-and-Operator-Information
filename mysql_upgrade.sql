@@ -41,6 +41,15 @@ CREATE TABLE IF NOT EXISTS `airports` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
+CREATE TABLE `operators_unknown` (
+  `airline_designator` varchar(10) NOT NULL,
+  `count` int DEFAULT '1',
+  `created` datetime DEFAULT CURRENT_TIMESTAMP,
+  `deleted` datetime DEFAULT NULL,
+  PRIMARY KEY (`airline_designator`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
