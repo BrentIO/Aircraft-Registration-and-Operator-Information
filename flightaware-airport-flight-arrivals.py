@@ -224,12 +224,24 @@ def get_arrivals(url = None, request_depth = 1):
     #Parse the response
     if "arrivals" not in response:
         raise Exception("'arrivals' missing from response object.")
-
+    
     #Process the arrivals array
     process_flights(response['arrivals'])
 
     #Make this recursive after giving FlightAware a cool off period
     request_depth = request_depth + 1
+
+    if "links" not in response:
+        logger.debug("No links in response, exiting get_arrivals")
+        return
+
+    if response['links'] == None:
+        logger.debug("Links is null in response, exiting get_arrivals")
+        return
+
+    if "next" not in response['links']:
+        logger.debug("No next in response links in response, exiting get_arrivals")
+        return
 
     if request_depth <= settings['flightAware']['page_depth']:
         logger.info("Sleeping " + str(settings['flightAware']['sleep_duration_seconds']) + " seconds prior to getting next page depth.")
@@ -259,12 +271,23 @@ def get_scheduled_arrivals(url = None, request_depth = 1):
     #Make this recursive after giving FlightAware a cool off period
     request_depth = request_depth + 1
 
+    if "links" not in response:
+        logger.debug("No links in response, exiting get_scheduled_arrivals")
+        return
+
+    if response['links'] == None:
+        logger.debug("Links is null in response, exiting get_scheduled_arrivals")
+        return
+
+    if "next" not in response['links']:
+        logger.debug("No next in response links in response, exiting get_scheduled_arrivals")
+        return
+
     if request_depth <= settings['flightAware']['page_depth']:
         logger.info("Sleeping " + str(settings['flightAware']['sleep_duration_seconds']) + " seconds prior to getting next page depth.")
         print("Sleeping " + str(settings['flightAware']['sleep_duration_seconds']) + " seconds prior to getting next page depth.")
         time.sleep(settings['flightAware']['sleep_duration_seconds'])  
         get_scheduled_arrivals(url = settings['download_url'] + "aeroapi/" + response['links']['next'], request_depth = request_depth)
-
     
 
 def get_flightaware_data(url):
@@ -295,7 +318,6 @@ def get_flightaware_data(url):
         raise Exception("Response code from request was " + str(response.status_code) + ".")
 
     return response.json()
-
 
 
 def export_data():
