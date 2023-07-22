@@ -398,7 +398,7 @@ class airport():
             return
       
         #Ensure these airports use their name exactly
-        if self.icao_code in ["KIAD", "KDFW", "KRDU", "KCVG", "CYUL", "KEWR", "KPIE"]:
+        if self.icao_code in ["KIAD", "KDFW", "KRDU", "KCVG", "CYUL", "KEWR", "KPIE", "KROC"]:
             self.phonic = self.name
             self.removeInternationalAirport()
             return
