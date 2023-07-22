@@ -381,7 +381,7 @@ class airport():
 
     def set_phonic(self):
 
-        if self.city not in self.name:
+        if self.city.replace("/", " ").replace("-", " ") not in self.name:
             self.phonic = self.city + " " + self.name
         else:
             self.phonic = self.name
@@ -391,6 +391,11 @@ class airport():
 
 
     def special_handling(self):
+
+        #Ensure airports beginning with "Greater" use their name exactly
+        if self.name.lower().startswith("greater"):
+            self.phonic = self.name
+            return
       
         #Ensure these airports use their name exactly
         if self.icao_code in ["KIAD", "KDFW", "KRDU", "KCVG", "CYUL", "KEWR", "KPIE"]:
