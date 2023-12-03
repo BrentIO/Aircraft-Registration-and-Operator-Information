@@ -18,6 +18,30 @@ from bson.objectid import ObjectId
 import mysql.connector #pip3 install mysql-connector-python
 import argparse
 
+###################
+# Content below for restricting TLS 1.3
+###################
+
+import ssl
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.poolmanager import PoolManager
+from requests.packages.urllib3.util import ssl_
+
+class TlsAdapter(HTTPAdapter):
+
+    def __init__(self, ssl_options=0, **kwargs):
+        self.ssl_options = ssl_options
+        super(TlsAdapter, self).__init__(**kwargs)
+
+    def init_poolmanager(self, *pool_args, **pool_kwargs):
+        ctx = ssl_.create_urllib3_context(cert_reqs=ssl.CERT_REQUIRED, options=self.ssl_options)
+        self.poolmanager = PoolManager(*pool_args, ssl_context=ctx, **pool_kwargs)
+
+###################
+# End TLS 1.3 Restriction
+###################
+
+
 # Supports extracts 2017 and later.  Prior to 2017 the FAA had different column positions.
 # https://registry.faa.gov/database/ReleasableAircraft.zip
 
@@ -200,8 +224,22 @@ def download():
     #Get the file from the FAA
     logger.info("Beginning file download from FAA.  File: " + settings['download_url'])
 
+    ###################
+    # Content below for restricting TLS 1.3
+    ###################
+
+    session = requests.session()
+    adapter = TlsAdapter(ssl.OP_NO_TLSv1_3)
+    session.mount("https://", adapter)
+
+    ###################
+    # End TLS 1.3 Restriction
+    ###################
+
+    headers = {"User-Agent":"P5Software AROI"}
+
     with yaspin(text="Downloading file from FAA...") as spinner:
-        response = requests.get(settings['download_url'])
+        response = session.get(settings['download_url'], headers=headers)
 
         spinner.text = "Completed file download from FAA.\n"
         spinner.ok()
